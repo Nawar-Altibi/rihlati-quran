@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build:pages": "node scripts/build-pages.mjs",
+    "deploy:pages": "npm run build:pages && npx wrangler pages deploy dist --project-name=rihlati-quran --branch=main"
   }
 }

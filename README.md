@@ -1,38 +1,63 @@
 # رِحلتي مع القرآن
 
-تطبيق عربي محلي لمتابعة الحفظ والمراجعة والتسميع وخطة الإجازة. يستخدم JavaScript modules وCSS دون إطار واجهات أو خدمات خارجية، لذلك لا يحتاج تثبيت حزم.
+An Arabic, right-to-left Quran memorization and revision tracker. The app helps learners record memorized material, plan revisions, track recitation sessions, and follow an Ijazah journey.
 
-## التشغيل
+## Features
 
-يتطلب Node.js 18 أو أحدث. من مجلد المشروع شغّل:
+- Dashboard with daily tasks, progress, streaks, and upcoming reviews.
+- Memorization records by complete surah, ayah range, Mushaf pages, or a manual description.
+- Spaced revision scheduling based on self-assessment.
+- Baseline assessments for previously memorized material.
+- Recitation session history and planned teacher sessions.
+- Study goals, calendar, analytics, dark mode, and responsive Arabic RTL layouts.
+- JSON export/import for backup and restore.
+- Browser-local storage; no account or server database is required.
+
+## Requirements
+
+- Node.js 18 or newer.
+- Wrangler for direct Cloudflare Pages deployments; `npx` can fetch it when needed.
+
+## Development
 
 ```bash
 npm start
 ```
 
-ثم افتح `http://localhost:4173`. لإجراء الاختبارات:
+Open [http://localhost:4173](http://localhost:4173).
+
+Run the test suite:
 
 ```bash
 npm test
 ```
 
-## هيكل المشروع
+## Build and deploy to Cloudflare Pages
 
-- `index.html` — هيكل التطبيق واتجاه RTL.
-- `styles.css` — نظام التصميم المتجاوب، الوضع الداكن، ومراعاة تقليل الحركة.
-- `src/app.js` — العرض والتفاعلات والنماذج.
-- `src/data.js` — بيانات البداية وأسماء السور وعدد آياتها.
-- `src/logic.js` — حساب التقدم، جدولة المراجعة، تقدير الإتمام، التحقق من المواد، والأيام المتتابعة.
-- `src/storage.js` — تحميل البيانات وترحيلها بأمان.
-- `server.js` — خادم ملفات محلي باستخدام Node المدمج.
-- `test/logic.test.js` — اختبارات الحسابات والتحقق والترحيل.
+The app is vanilla HTML, CSS, and JavaScript modules, so it has no framework compilation step. The Pages build script copies only the web app into `dist/`; it excludes tests, the local Node server, and documentation from the public asset bundle.
 
-## البيانات والميزات
+For a direct production deployment, authenticate Wrangler once with `npx wrangler login`, then run:
 
-تُحفظ البيانات في `localStorage` على المتصفح والجهاز الحالي. استخدم تصدير JSON للنسخ الاحتياطي أو نقل البيانات؛ الاستيراد يتحقق من الإصدار ويطلب التأكيد قبل الاستبدال. تُرحّل بيانات الإصدار الأول تلقائيًا إلى الإصدار الثاني مع الحفاظ على السجلات ومعرّفاتها. إذا كانت البيانات المخزنة غير صالحة، يعرض التطبيق تنبيهًا ولا يستبدلها تلقائيًا؛ صدّر أو انسخ بياناتك قبل إعادة الضبط.
+```bash
+npm run deploy:pages
+```
 
-يمكن تسجيل مادة الحفظ بسورة كاملة أو نطاق آيات أو صفحات من طبعة محددة أو وصف يدوي. يتحقق التطبيق من التواريخ والنطاقات والتداخل لتقليل ازدواج الحساب. سجلات الحفظ السابق لا تُمنح تاريخًا أو تقييمًا افتراضيًا، ويمكن بدء تقييم تأسيسي لها. المراجعات تُسجل بتقييم صريح وتحدد موعد المراجعة التالية وفق النتيجة. المواعيد المخططة منفصلة عن الجلسات والأنشطة المكتملة.
+This builds the static bundle and deploys it to the `rihlati-quran` Cloudflare Pages project on the `main` production branch. The production build command for a Git-integrated Pages project is `npm run build:pages`, with `dist` as the output directory. Connect the private GitHub repository `Nawar-Altibi/rihlati-quran` to Pages to enable production deploys from `main` and preview deploys from pull requests.
 
-بيانات البداية تسجل جزء عمّ وجزء تبارك كمحفوظ سابق يحتاج تثبيتًا، دون افتراض عدد صفحات أو إتقانهما. سجل النبأ والنازعات يذكر التسميع السابق فقط دون تاريخ أو تقييم. أسماء السور وعدد آياتها مدرجة، أما حدود الأجزاء والصفحات فتُدخل يدويًا لأن أرقام الصفحات تختلف باختلاف طبعة المصحف. نسبة التقدم الإجمالية تستخدم ٦٠٤ صفحة بوصفها طبعة المدينة الافتراضية القابلة للتعديل. تقدير إتمام الحفظ حسابي، ولا يقدّر موعد الإجازة.
+Production URL: <https://rihlati-quran.pages.dev> (available after the Pages project is connected and its first deployment succeeds).
 
-الواجهة تعمل دون اتصال بعد تحميل ملفات التطبيق؛ خط IBM Plex Sans Arabic وخط Amiri اختياريان من Google Fonts، وتعود الواجهة إلى خطوط النظام عند غياب الشبكة. لا توجد مزامنة بين الأجهزة أو إشعارات في النسخة الحالية.
+## Data and backups
+
+Progress is stored in browser `localStorage` for the current origin and device. It does not sync across browsers or devices. Moving from localhost or another domain does not move localStorage automatically. Export a JSON backup from the existing app, open the deployed site, then import that backup there. Keep personal backup files out of Git; the repository `.gitignore` excludes common backup names.
+
+## Project structure
+
+- `index.html` — RTL app shell and metadata.
+- `styles.css` — responsive visual system and theme styles.
+- `src/app.js` — application views, forms, and interactions.
+- `src/data.js` — surah metadata and initial data.
+- `src/logic.js` — progress, validation, scheduling, and date calculations.
+- `src/storage.js` — local persistence and data migration.
+- `scripts/build-pages.mjs` — creates the clean static `dist/` bundle.
+- `test/logic.test.js` — logic and storage migration tests.
+- `server.js` — local development server.
