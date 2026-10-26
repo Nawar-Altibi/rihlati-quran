@@ -42,9 +42,9 @@ For a direct production deployment, authenticate Wrangler once with `npx wrangle
 npm run deploy:pages
 ```
 
-This builds the static bundle and deploys it to the `rihlati-quran` Cloudflare Pages project on the `main` production branch. The production build command for a Git-integrated Pages project is `npm run build:pages`, with `dist` as the output directory. Connect the private GitHub repository `Nawar-Altibi/rihlati-quran` to Pages to enable production deploys from `main` and preview deploys from pull requests.
+This builds the static bundle and deploys it to the `rihlati-quran` Cloudflare Pages project on the `main` production branch. The production build command for a Git-integrated Pages project is `npm run build:pages`, with `dist` as the output directory. Cloudflare Pages is connected to the private GitHub repository [`Nawar-Altibi/rihlati-quran`](https://github.com/Nawar-Altibi/rihlati-quran). Pushes to `main` automatically deploy to production; other branches and pull requests receive preview deployments.
 
-Production URL: <https://rihlati-quran.pages.dev> (available after the Pages project is connected and its first deployment succeeds).
+Production URL: <https://rihlati-quran.pages.dev>
 
 ## Data and backups
 
