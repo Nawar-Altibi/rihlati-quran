@@ -44,7 +44,7 @@ test('duplicate save same day does not create repeated achievements', () => {
 
 test('voluntary early revision updates existing due review independently by Surah', () => {
   const d=data(), id=ids();
-  recordDailyReviews(d,{surahs:[78,79],date:'2026-10-26',ratings:{78:'أخطاء بسيطة',79:'متقن'}},id);
+  recordDailyReviews(d,{surahs:[78,79],date:'2026-10-26',ratings:{78:'متقن',79:'متقن'}},id);
   const oldDue=d.revisions.find(r=>!r.done&&r.unitId===getSurahUnit(d,78).id).dueDate;
   recordDailyReviews(d,{surahs:[78],date:'2026-10-27',ratings:{78:'ضعيف'}},id);
   const later=d.revisions.find(r=>!r.done&&r.unitId===getSurahUnit(d,78).id);
