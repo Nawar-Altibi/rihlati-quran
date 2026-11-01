@@ -126,6 +126,10 @@ export function recordQuizAttempt(data,passage,mistakeAyahs=[],id=()=>crypto.ran
 
 export function quizSummary(data){
   const attempts=data.quizAttempts||[],mistakes=getQuizMistakeCounts(data);
+  const weakLocations=[...mistakes].map(([key,count])=>{
+    const [surah,ayah]=key.split(':').map(Number);
+    return {surah,ayah,count};
+  }).sort((a,b)=>b.count-a.count||a.surah-b.surah||a.ayah-b.ayah);
   return {attempts:attempts.length, mistakeLocations:mistakes.size,
-    last:attempts.at(-1)||null};
+    weakLocations:weakLocations.slice(0,8),last:attempts.at(-1)||null};
 }
