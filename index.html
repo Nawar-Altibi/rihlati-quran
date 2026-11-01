@@ -17,17 +17,22 @@
       <div class="brand"><div class="brand-mark">۞</div><div><strong>رِحلتي مع القرآن</strong><small>خطوةٌ ثابتة، وأثرٌ باقٍ</small></div></div>
       <div class="nav-label">المساحة</div>
       <nav id="navigation" aria-label="التنقل الرئيسي">
-        <button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span>لوحة التحكم</button>
-        <button class="nav-item" data-view="memorize"><span class="nav-icon">▤</span>متابعة الحفظ</button>
-        <button class="nav-item" data-view="revision"><span class="nav-icon">◷</span>المراجعة الذكية <span id="due-badge" class="nav-badge">0</span></button>
+        <button class="nav-item active" data-view="today"><span class="nav-icon">⌂</span>اليوم</button>
+        <button class="nav-item" data-view="quran"><span class="nav-icon">▤</span>خطة القرآن</button>
         <button class="nav-item" data-view="sessions"><span class="nav-icon">◉</span>التسميع</button>
-        <button class="nav-item" data-view="plan"><span class="nav-icon">⌁</span>خطة الحفظ</button>
-        <button class="nav-item" data-view="calendar"><span class="nav-icon">▦</span>التقويم</button>
-        <button class="nav-item" data-view="analytics"><span class="nav-icon">▥</span>الإحصائيات</button>
+        <button class="nav-item" data-view="progress"><span class="nav-icon">▥</span>تقدمي</button>
+        <details class="advanced-nav"><summary>خيارات متقدمة</summary>
+          <button class="nav-item" data-view="dashboard"><span class="nav-icon">⌂</span>لوحة التحكم التفصيلية</button>
+          <button class="nav-item" data-view="memorize"><span class="nav-icon">▤</span>سجل الحفظ التفصيلي</button>
+          <button class="nav-item" data-view="revision"><span class="nav-icon">◷</span>المراجعة التفصيلية <span id="due-badge" class="nav-badge">0</span></button>
+          <button class="nav-item" data-view="plan"><span class="nav-icon">⌁</span>الخطة التفصيلية</button>
+          <button class="nav-item" data-view="calendar"><span class="nav-icon">▦</span>التقويم</button>
+          <button class="nav-item" data-view="analytics"><span class="nav-icon">▥</span>الإحصائيات</button>
+        </details>
       </nav>
       <div class="sidebar-bottom"><div class="quote-mini"><span>﴿</span><p>وَلَقَدْ يَسَّرْنَا الْقُرْآنَ لِلذِّكْرِ فَهَلْ مِن مُّدَّكِرٍ</p><small>سورة القمر · ١٧</small></div><button class="nav-item" data-view="settings"><span class="nav-icon">⚙</span>الإعدادات</button><div class="profile-row"><div class="avatar">ق</div><div><strong>رحلتي اليومية</strong><small>حفظٌ ومراجعةٌ بإتقان</small></div><button id="theme-toggle" class="icon-button" title="تبديل المظهر" aria-label="تبديل المظهر">◐</button></div></div>
     </aside>
-    <main class="main-area"><header class="topbar"><button class="mobile-menu" id="mobile-menu" aria-label="فتح القائمة">☰</button><div class="breadcrumb">رحلتي <span>/</span> <b id="page-title">لوحة التحكم</b></div><div class="top-actions"><span class="today-label" id="top-date"></span><button class="icon-button" id="quick-add" title="إضافة نشاط">＋</button></div></header><section id="content" class="content"></section></main>
+    <main class="main-area"><header class="topbar"><button class="mobile-menu" id="mobile-menu" aria-label="فتح القائمة">☰</button><div class="breadcrumb">رحلتي <span>/</span> <b id="page-title">اليوم</b></div><div class="top-actions"><span class="today-label" id="top-date"></span><button class="icon-button" id="quick-add" title="إضافة نشاط">＋</button></div></header><section id="content" class="content"></section></main>
   </div>
   <div id="modal-root"></div><div id="toast-root" aria-live="polite"></div>
   <script type="module" src="./src/app.js"></script>

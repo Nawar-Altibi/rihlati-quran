@@ -13,4 +13,5 @@ await mkdir(output, { recursive: true });
 await cp(path.join(root, 'index.html'), path.join(output, 'index.html'));
 await cp(path.join(root, 'styles.css'), path.join(output, 'styles.css'));
 await cp(path.join(root, 'src'), path.join(output, 'src'), { recursive: true });
+await cp(path.join(root, 'licenses'), path.join(output, 'licenses'), { recursive: true });
 console.log(`Cloudflare Pages assets prepared in ${output}`);

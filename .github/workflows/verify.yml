@@ -1,0 +1,23 @@
+name: Verify Quran App
+on:
+  push:
+    branches: [main, feature/simple-daily-quran-flow]
+  pull_request:
+    branches: [main]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax validation
+        run: |
+          node --check src/app.js
+          node --check src/simple-flow.js
+          node --check src/simple-ui.js
+      - name: Run tests
+        run: npm test
+      - name: Validate Cloudflare Pages build
+        run: npm run build:pages
