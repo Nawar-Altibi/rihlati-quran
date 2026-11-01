@@ -63,7 +63,6 @@ const STUDY_KEYS={
   weeklyGoals:['date','title','done','surah','target'],
   attempts:['date','surah','rating','result']
 };
-const STUDY_ALLOWED=new Set(['asOf','coverageNote','settings','totalCounts','reviewRatings','activeDays30','topMistakes','details','omitted','shareNotes']);
 export function sanitizeStudyContext(raw) {
   if(raw==null)return null;
   if(typeof raw!=='object'||Array.isArray(raw))throw new Error('تفاصيل السجل غير صالحة.');
@@ -125,11 +124,11 @@ export async function onRequestPost({request,env}){
   }
   if(!String(request.headers.get('Content-Type')||'').includes('application/json'))return reply({error:'مطلوب JSON.'},415);
   const size=Number(request.headers.get('Content-Length')||0);
-  if(size>30000)return reply({error:'حجم الطلب أكبر من المسموح.'},413);
+  if(size>64000)return reply({error:'حجم الطلب أكبر من المسموح.'},413);
   let input;
   try {
     const raw=await request.text();
-    if(raw.length>30000)return reply({error:'حجم الطلب أكبر من المسموح.'},413);
+    if(raw.length>33000)return reply({error:'حجم الطلب أكبر من المسموح.'},413);
     input=sanitizeMentorRequest(JSON.parse(raw));
   }catch(e){return reply({error:e?.message||'الطلب غير صالح.'},400);}
   try{
