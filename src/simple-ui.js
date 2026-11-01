@@ -63,25 +63,44 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     '<div class="simple-panel"><h2>تفاصيل إضافية</h2><p class="simple-muted">التقويم والإحصائيات التفصيلية متاحة في الخيارات المتقدمة.</p><div class="simple-actions">' + btn('simple-calendar-link', 'التقويم', 'secondary small-btn') + btn('simple-analytics-link', 'الإحصائيات', 'secondary small-btn') + '</div></div>';
   }
 
-  function surahCheckboxes(numbers, selected = []) {
-    return '<div class="simple-picker-list">' + numbers.map(n => '<div class="simple-picker-row" data-search-name="' + esc(surahName(n)) + '"><label><input type="checkbox" name="surahs" value="' + n + '" ' + (selected.includes(n) ? 'checked' : '') + '><span>سورة ' + esc(surahName(n)) + '</span></label><select class="select simple-rating" name="rating-' + n + '" aria-label="تقييم سورة ' + esc(surahName(n)) + '"><option value="">راجعتها فقط (دون تقييم)</option><option value="متقن">متقن</option><option value="أخطاء بسيطة">جيد</option><option value="يحتاج مراجعة">يحتاج تثبيت</option><option value="ضعيف">ضعيف</option></select></div>').join('') + '</div>';
+  function surahCheckboxes(numbers, selected = [], current = numbers) {
+    return '<div class="simple-picker-list">' + numbers.map(n =>
+      '<div class="simple-picker-row" data-surah-number="'+n+'" data-current="'+(current.includes(n)?'1':'0')+'" data-search-name="'+esc(surahName(n))+'"' + (!current.includes(n)&&!selected.includes(n)?' hidden':'') + '>' +
+      '<label><input type="checkbox" name="surahs" value="'+n+'" '+(selected.includes(n)?'checked':'')+'><span>سورة '+esc(surahName(n))+'</span></label>' +
+      '<select class="select simple-rating" name="rating-'+n+'" aria-label="تقييم سورة '+esc(surahName(n))+'"><option value="">راجعتها فقط (دون تقييم)</option><option value="متقن">متقن</option><option value="أخطاء بسيطة">جيد</option><option value="يحتاج مراجعة">يحتاج تثبيت</option><option value="ضعيف">ضعيف</option></select></div>'
+    ).join('') + '</div>';
   }
 
   function openReview(preselected = []) {
-    const stage = getCurrentStage(d());
-    const previous = SIMPLE_STAGES.filter(s => SIMPLE_STAGES.indexOf(s) < SIMPLE_STAGES.indexOf(stage)).flatMap(s=>s.surahs);
-    const extra = (stage.id === 'baqarah' ? [2] : stage.surahs);
-    const all = [...new Set([...extra,...previous])];
-    const select = preselected.length ? [...new Set([...preselected,...all])] : all;
-    openModal('سجّل مراجعتك', '<input type="hidden" name="simpleDailyReview" value="1"><div class="simple-modal-intro">اختار السور اللي راجعتها اليوم، ولو بس سورة واحدة. التقييم اختياري لكل سورة.</div><label class="field"><span>تاريخ المراجعة</span><input class="input" type="date" name="date" value="' + todayKey() + '" required></label><label class="field"><span>ابحث عن سورة</span><input class="input" type="search" id="simple-surah-search" placeholder="اسم السورة..."></label>' + surahCheckboxes(select, preselected) + '<label class="field"><span>ملاحظاتك (اختياري)</span><textarea class="textarea" name="notes" rows="2" placeholder="مواضع تحتاج إعادة أو تصحيح..."></textarea></label><div class="simple-modal-hint">إذا تركت التقييم فارغًا، رح نحفظ المراجعة من دون اعتبار السورة متقنة أو تغيير موعدها.</div>');
+    const stage=getCurrentStage(d());
+    const previous=SIMPLE_STAGES.filter(s=>SIMPLE_STAGES.indexOf(s)<SIMPLE_STAGES.indexOf(stage)).flatMap(s=>s.surahs);
+    const current=[...new Set([...stage.surahs,...previous,...preselected])];
+    const numbers=[...new Set([...current,...SURAH_NAMES.map(s=>s.number)])];
+    openModal('سجّل مراجعتك','<input type="hidden" name="simpleDailyReview" value="1">'+
+      '<div class="simple-modal-intro">اختار السور اللي راجعتها، وقيّم كل واحدة إذا حبيت. ما في داعي تعرف رقم الجزء أو الصفحة.</div>'+
+      '<label class="field"><span>التاريخ</span><input class="input" type="date" name="date" value="'+todayKey()+'" required></label>'+
+      '<label class="field"><span>ابحث عن سورة بالاسم أو الرقم</span><input class="input" type="search" id="simple-surah-search" placeholder="اكتب اسم السورة أو رقمها..."></label>'+
+      '<label class="simple-show-all"><input type="checkbox" id="simple-show-all"> إظهار كل السور</label>'+
+      surahCheckboxes(numbers,preselected,current)+
+      '<label class="field"><span>ملاحظات (اختياري)</span><textarea class="textarea" name="notes" rows="2"></textarea></label>'+
+      '<div class="simple-modal-hint">إذا تركت التقييم فارغًا، يُسجّل النشاط بدون احتساب إتقان أو جدولة مراجعة جديدة.</div>');
   }
 
   function openGroupPlan(immediate = false) {
-    const stage = getCurrentStage(d()), selected = stage.surahs;
-    const previous = SIMPLE_STAGES.filter(s => SIMPLE_STAGES.indexOf(s) < SIMPLE_STAGES.indexOf(stage)).flatMap(s=>s.surahs);
-    const numbers = [...new Set([...selected,...previous])];
-    const labels = numbers.map(n=>'<label class="simple-select-chip"><input type="checkbox" name="surahs" value="' + n + '"> سورة ' + esc(surahName(n)) + '</label>').join('');
-    openModal(immediate ? 'تسجيل تسميع اليوم' : 'جدولة تسميع', '<input type="hidden" name="simpleGroupPlan" value="1"><input type="hidden" name="doneNow" value="' + (immediate ? '1' : '0') + '"><div class="simple-modal-intro">حدد السور اللي رح تسمّعها ضمن جلسة واحدة.</div><label class="field"><span>التاريخ</span><input class="input" type="date" name="date" value="' + todayKey() + '" required></label><label class="field"><span>المعلّم أو صاحبك (اختياري)</span><input class="input" name="teacher" placeholder="الاسم"></label><div class="field"><span>السور</span><div class="simple-chip-list">' + labels + '</div></div>' + (immediate ? '<label class="field"><span>النتيجة</span><select class="select" name="result"><option>غير محدد</option><option>اجتاز</option><option>يحتاج تكرار</option></select></label>' : '') + '<label class="field"><span>ملاحظات (اختياري)</span><textarea class="textarea" name="notes"></textarea></label>');
+    const stage=getCurrentStage(d()),previous=SIMPLE_STAGES.filter(s=>SIMPLE_STAGES.indexOf(s)<SIMPLE_STAGES.indexOf(stage)).flatMap(s=>s.surahs);
+    const current=[...new Set([...stage.surahs,...previous])];
+    const numbers=[...new Set([...current,...SURAH_NAMES.map(s=>s.number)])];
+    const labels=numbers.map(n=>'<label class="simple-select-chip" data-surah-number="'+n+'" data-current="'+(current.includes(n)?'1':'0')+'"' + (current.includes(n)?'':' hidden') + '><input type="checkbox" name="surahs" value="'+n+'"> سورة '+esc(surahName(n))+'</label>').join('');
+    openModal(immediate?'تسجيل تسميع اليوم':'جدولة تسميع',
+      '<input type="hidden" name="simpleGroupPlan" value="1"><input type="hidden" name="doneNow" value="'+(immediate?'1':'0')+'">'+
+      '<div class="simple-modal-intro">اختر موعدك والسور التي ستسمّعها في جلسة واحدة.</div>'+
+      '<label class="field"><span>التاريخ</span><input class="input" type="date" name="date" value="'+todayKey()+'" required></label>'+
+      '<label class="field"><span>المعلّم (اختياري)</span><input class="input" name="teacher" placeholder="اسم المعلّم"></label>'+
+      '<label class="field"><span>ابحث عن سورة</span><input class="input" type="search" id="simple-group-search" placeholder="اسم السورة أو رقمها"></label>'+
+      '<label class="simple-show-all"><input type="checkbox" id="simple-group-all"> إظهار كل السور</label>'+
+      '<div class="field"><span>السور</span><div class="simple-chip-list">'+labels+'</div></div>'+
+      (immediate?'<label class="field"><span>النتيجة</span><select class="select" name="result"><option>غير محدد</option><option>اجتاز</option><option>يحتاج تكرار</option></select></label>':'')+
+      '<label class="field"><span>ملاحظات (اختياري)</span><textarea class="textarea" name="notes"></textarea></label>');
   }
 
   function openGroupDone(id) {
@@ -147,10 +166,23 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   }
 
   function modalInput(e) {
-    if (memo.onInput(e)) return;
-    if(e.target.id === 'simple-surah-search') {
-      const q = e.target.value.trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي');
-      document.querySelectorAll('.simple-picker-row').forEach(row => {row.hidden = !row.dataset.searchName.replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').includes(q);});
+    if(memo.onInput(e))return;
+    const t=e.target;
+    if(t.id==='simple-surah-search'||t.id==='simple-show-all'){
+      const q=normalizeArabicSearch(document.querySelector('#simple-surah-search')?.value);
+      const all=document.querySelector('#simple-show-all')?.checked;
+      document.querySelectorAll('.simple-picker-row').forEach(row=>{
+        const selected=row.querySelector('input[type="checkbox"]')?.checked;
+        row.hidden=q ? !(normalizeArabicSearch(row.dataset.searchName).includes(q)||row.dataset.surahNumber.includes(q)) : (!all&&row.dataset.current!=='1'&&!selected);
+      });
+    }
+    if(t.id==='simple-group-search'||t.id==='simple-group-all'){
+      const q=normalizeArabicSearch(document.querySelector('#simple-group-search')?.value);
+      const all=document.querySelector('#simple-group-all')?.checked;
+      document.querySelectorAll('.simple-select-chip').forEach(row=>{
+        const checked=row.querySelector('input')?.checked;
+        row.hidden=q ? !(normalizeArabicSearch(row.textContent).includes(q)||row.dataset.surahNumber.includes(q)) : (!all&&row.dataset.current!=='1'&&!checked);
+      });
     }
   }
 
