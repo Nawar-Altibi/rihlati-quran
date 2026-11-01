@@ -10,7 +10,7 @@ const weekNames = ['الأحد','الإثنين','الثلاثاء','الأرب�
 const statusText = unit => !unit ? 'لم تبدأ مراجعتها' : unit.lastRating === 'متقن' ? 'مراجعة ممتازة' : unit.lastRating === 'أخطاء بسيطة' ? 'جيدة' : unit.lastRating === 'يحتاج مراجعة' || unit.lastRating === 'ضعيف' ? 'تحتاج تثبيت' : 'بانتظار أول تقييم';
 const btn = (action, label, klass = 'primary', id = '') => '<button class="' + klass + '" type="button" data-action="' + action + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + '>' + label + '</button>';
 
-export function createSimpleUI({ getData, persist, toast, openModal, navigate, render, openMemorizeModal }) {
+export function createSimpleUI({ getData, persist, toast, openModal, navigate, render, openMemorizeModal, openMushafSurah, openMushaf }) {
   const d = () => getData();
   const memo = createMemorizeUI({getData,persist,toast,openModal,render});
   const savedReview = n => d().activities.some(a => a.type === 'revision' && a.date === todayKey() && d().units.some(u => u.id === a.unitId && Number(u.surah) === n));
@@ -19,7 +19,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     return stage.surahs.map(n => {
       const unit = getSurahUnit(d(), n);
       const due = d().revisions.filter(r => !r.done && unit && r.unitId === unit.id).sort((a,b) => a.dueDate.localeCompare(b.dueDate))[0];
-      return '<div class="simple-surah"><div class="simple-surah-name"><span class="simple-verse-mark">۞</span><div><strong>سورة ' + esc(surahName(n)) + '</strong><small>' + esc(statusText(unit)) + (unit?.lastReviewed ? ' · آخر مراجعة ' + fmt(unit.lastReviewed) : '') + '</small></div></div><div class="simple-surah-meta">' + (due ? '<small>القادمة: ' + fmt(due.dueDate) + '</small>' : '') + (savedReview(n) ? '<span class="simple-done">✓ راجعتها اليوم</span>' : '') + btn('simple-review-one', 'راجعها', 'secondary small-btn', String(n)) + '</div></div>';
+      return '<div class="simple-surah"><div class="simple-surah-name"><span class="simple-verse-mark">۞</span><div><strong>سورة ' + esc(surahName(n)) + '</strong><small>' + esc(statusText(unit)) + (unit?.lastReviewed ? ' · آخر مراجعة ' + fmt(unit.lastReviewed) : '') + '</small></div></div><div class="simple-surah-meta">' + (due ? '<small>القادمة: ' + fmt(due.dueDate) + '</small>' : '') + (savedReview(n) ? '<span class="simple-done">✓ راجعتها اليوم</span>' : '') + btn('simple-read-surah', 'افتح بالمصحف', 'secondary small-btn', String(n)) + btn('simple-review-one', 'سجّل مراجعة', 'secondary small-btn', String(n)) + '</div></div>';
     }).join('');
   }
 
@@ -32,7 +32,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     const suggested = activeSurahs[0] || stage.surahs[0];
     const dueHtml = due.length ? due.slice(0,5).map(r => '<div class="simple-due-row"><div><b>' + esc(r.title) + '</b><small>' + (r.dueDate < todayKey() ? 'متأخرة منذ ' : 'مستحقة ') + fmt(r.dueDate) + '</small></div>' + btn('simple-review-one', 'سجّل مراجعتها', 'secondary small-btn', String(data.units.find(u => u.id === r.unitId)?.surah || '')) + '</div>').join('') : '<p class="simple-muted">ما عندك مراجعات مجدولة مستحقة الآن. فيك تراجع أي سورة بدك ياها وتسجلها.</p>';
     return '<section class="simple-hero"><div><div class="simple-kicker">وردك اليوم · ' + fmt(todayKey()) + '</div><h1>السلام عليكم ورحمة الله وبركاته</h1><p>خطوة صغيرة كل يوم، وحفظ أثبت بإذن الله.</p><span class="simple-phase-tag">' + esc(stage.title) + '</span></div><div class="simple-hero-flower" aria-hidden="true">۞</div></section>' +
-    '<section class="simple-main-actions"><div class="simple-primary-card"><div class="simple-kicker">سجّل إنجازك بخطوة واحدة</div><h2>شو عملت اليوم؟</h2><p>اختار السور اللي راجعتها واحفظها سوا، حتى لو كانت مراجعة إضافية قبل موعدها.</p><div class="simple-actions">' + btn('simple-review-open', '✓ راجعت', 'primary') + btn('simple-memorize', '＋ حفظت', 'secondary') + btn('simple-teacher-now', '◉ سمّعت', 'secondary') + '</div></div><div class="simple-side-card"><div class="simple-kicker">المرحلة الحالية</div><h3>' + esc(stage.title) + '</h3><p>' + esc(stage.description) + '</p>' + (suggested ? '<div class="simple-tip">مقترح للبدء: سورة ' + esc(surahName(suggested)) + '</div>' : '') + btn('simple-plan-link', 'افتح خطة القرآن', 'secondary small-btn') + '</div></section>' +
+    '<section class="simple-main-actions"><div class="simple-primary-card"><div class="simple-kicker">سجّل إنجازك بخطوة واحدة</div><h2>شو عملت اليوم؟</h2><p>اختار السور اللي راجعتها واحفظها سوا، حتى لو كانت مراجعة إضافية قبل موعدها.</p><div class="simple-actions">' + btn('simple-review-open', '✓ راجعت', 'primary') + btn('simple-memorize', '＋ حفظت', 'secondary') + btn('simple-teacher-now', '◉ سمّعت', 'secondary') + btn('simple-open-mushaf', '◈ افتح المصحف', 'secondary') + '</div></div><div class="simple-side-card"><div class="simple-kicker">المرحلة الحالية</div><h3>' + esc(stage.title) + '</h3><p>' + esc(stage.description) + '</p>' + (suggested ? '<div class="simple-tip">مقترح للبدء: سورة ' + esc(surahName(suggested)) + '</div>' : '') + btn('simple-plan-link', 'افتح خطة القرآن', 'secondary small-btn') + '</div></section>' +
     '<section class="simple-overview"><div class="simple-panel"><h2>مراجعاتك المستحقة <span class="simple-count">' + due.length + '</span></h2>' + dueHtml + '</div><div class="simple-panel"><h2>تسميعك القادم</h2>' + (next ? '<p>موعد ' + fmt(next.date) + ' · ' + (next.surahs || [next.surah]).filter(Boolean).map(surahName).join('، ') + '</p>' : '<p class="simple-muted">لسه ما حددت جلسة تسميع. اختار يوم يناسبك وصاحبك.</p>') + btn('simple-teacher-schedule', 'جدولة تسميع', 'secondary small-btn') + '<div class="simple-today-count">أنشطة اليوم المسجلة: <b>' + activities.length + '</b></div></div></section>';
   }
 
@@ -113,6 +113,8 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     switch(action) {
       case 'simple-review-open': openReview(); return true;
       case 'simple-review-one': openReview([Number(id)]); return true;
+      case 'simple-read-surah': openMushafSurah(Number(id)); return true;
+      case 'simple-open-mushaf': openMushaf(); return true;
       case 'simple-memorize': memo.open(); return true;
       case 'simple-teacher-schedule': openGroupPlan(); return true;
       case 'simple-teacher-now': openGroupPlan(true); return true;
