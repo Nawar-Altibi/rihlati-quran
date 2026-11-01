@@ -1,6 +1,6 @@
 export const STORAGE_VERSION = 2;
 
-const arrays = ['units','revisions','attempts','sessions','tasks','activities'];
+const arrays = ['units','revisions','attempts','sessions','tasks','activities','quizAttempts'];
 
 /** Upgrade saved v1 data without replacing its records, identifiers, or seed history. */
 export function migrateData(saved, defaults) {
