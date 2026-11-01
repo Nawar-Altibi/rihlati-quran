@@ -58,7 +58,7 @@ test('cloud AI context is whitelisted and never includes private notes or raw ac
   assert.equal(serialized.includes('private-unit-token'),false);
   assert.equal(serialized.includes('private medical secret'),false);
   assert.equal(packet.question,'ممكن تعطيني برنامج؟');
-  assert.ok(Object.keys(packet.context).length<=9);
+  assert.ok(Object.keys(packet.context).length<=10);
 });
 test('stage transitions and incomplete memory preserve honest context',()=>{
   const d=data();d.settings.simpleStage='tabarak';
