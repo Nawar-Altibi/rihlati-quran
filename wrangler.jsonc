@@ -1,0 +1,15 @@
+{
+  "name": "rihlati-quran",
+  "pages_build_output_dir": "./dist",
+  "compatibility_date": "2026-10-26",
+  "ai": {
+    "binding": "AI"
+  },
+  "d1_databases": [
+    {
+      "binding": "MENTOR_QUOTA_DB",
+      "database_name": "rihlati-mentor-quota",
+      "database_id": "d7e1a85a-1c1e-491d-94b4-0805b359904a"
+    }
+  ]
+}
