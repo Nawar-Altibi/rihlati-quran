@@ -205,7 +205,12 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     return true;
   }
   function handleKeydown(e){
-    if(e.key!=='Enter' || e.repeat)return false;
+    if(e.key!=='Enter')return false;
+    if(e.repeat && selfTest && e.target.closest?.('#mushaf-page-body .mushaf-verse')){
+      e.preventDefault(); // Holding Enter must not skip multiple hidden verses.
+      return true;
+    }
+    if(e.repeat)return false;
 
     // When an unrevealed Quran Ayah has keyboard focus, Enter behaves exactly
     // like pressing "اكشف الآية". Stop the button's synthesized click so the
