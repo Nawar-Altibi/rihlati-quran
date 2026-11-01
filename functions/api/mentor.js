@@ -145,9 +145,14 @@ export async function onRequestPost({request,env}){
         ...history,
         {role:'user',content:input.question}
       ],
-      max_tokens:720,temperature:0.35
+      max_tokens:900,temperature:0.35
     });
-    const answer=typeof response?.response==='string'?response.response.trim():'';
+    // Cloudflare Workers AI models use different output envelopes:
+    // Llama commonly returns {response}, GPT-OSS uses {choices:[{message:{content}}]}.
+    // Never expose internal model reasoning / reasoning_content to the browser.
+    const answer=typeof response?.choices?.[0]?.message?.content==='string'
+      ? response.choices[0].message.content.trim()
+      : typeof response?.response==='string' ? response.response.trim() : '';
     if(!answer)return reply({error:'نموذج AI لم يُرجع جوابًا صالحًا؛ استخدم المساعد المحلي.'},502);
     return reply({answer:answer.slice(0,2900),source:'workers-ai',model:'gpt-oss-120b'});
   }catch{return reply({error:'تعذّرت الإجابة من نموذج AI الآن؛ المساعد المحلي متاح.'},502);}
