@@ -25,6 +25,18 @@ export function revealCurrentAyah(state) {
     ? {...state,revealed:[...state.revealed,key],showAll:false}
     : {...state,showAll:false};
 }
+/**
+ * Reveal the active Ayah and advance selection to the next hidden/visible Ayah
+ * on the same page in one explicit user action. Never auto-advance off page.
+ * At the last Ayah, stay put so the user can consciously finish the test.
+ */
+export function revealAndAdvanceAyah(state) {
+  const revealed=revealCurrentAyah(state);
+  return revealed.currentIndex < revealed.ayahs.length-1
+    ? {...revealed,currentIndex:revealed.currentIndex+1}
+    : revealed;
+}
+
 export function moveTestCursor(state, amount) {
   if (!state) throw new Error('لم يبدأ الاختبار.');
   const currentIndex=Math.max(0,Math.min(state.ayahs.length-1,state.currentIndex+amount));
