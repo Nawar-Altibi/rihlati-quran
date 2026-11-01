@@ -106,3 +106,23 @@ body.dark .simple-primary-card{background:var(--surface)}
 body.dark .simple-tip,body.dark .simple-modal-hint{background:#1d4637;color:#d0eadc}
 @media(max-width:1100px){.simple-main-actions,.simple-overview{grid-template-columns:1fr}.simple-surah-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.simple-hero{padding:24px 20px;min-height:168px}.simple-hero h1{font-size:24px}.simple-hero-flower{font-size:120px;left:-10px;top:22px}.simple-primary-card,.simple-side-card,.simple-panel{padding:17px}.simple-page-heading{align-items:flex-start;flex-direction:column}.simple-page-heading h1{font-size:25px}.simple-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.simple-picker-row{align-items:flex-start;flex-direction:column}.simple-picker-row .simple-rating{max-width:none;width:100%}.simple-chip-list{grid-template-columns:1fr}.simple-surah{flex-wrap:wrap}.simple-surah-meta{flex-direction:row;align-items:center;margin-right:auto}}
+
+
+/* Smart memorization: searchable Surah chooser and verified metadata preview */
+.simple-scope-row{display:flex;align-items:center;gap:22px;flex-wrap:wrap;margin-top:9px}
+.simple-scope-row label{display:inline-flex;align-items:center;gap:7px;font-size:14px;cursor:pointer}
+.simple-scope-row input{accent-color:var(--green);width:19px;height:19px}
+.simple-ayah-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.simple-auto-summary{border:1px solid #bcd4c4;background:var(--green-soft);border-radius:13px;padding:15px;margin:14px 0}
+.simple-auto-summary h3{color:var(--green);font-size:15px;margin:0 0 10px}
+.simple-auto-summary>div{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:6px 0;border-bottom:1px solid #a5c5ae55}
+.simple-auto-summary>div:last-child{border-bottom:0}
+.simple-auto-summary span{font-size:12px;color:var(--muted)}
+.simple-auto-summary b{font-size:13px;text-align:left}
+.simple-show-all{display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:8px 0;margin-top:4px;color:var(--green)}
+.simple-show-all input{accent-color:var(--green);width:18px;height:18px}
+.simple-select-chip[hidden],.simple-picker-row[hidden]{display:none!important}
+#simple-mem-surah{max-width:100%}
+body.dark .simple-auto-summary{background:#204839;border-color:#48775c}
+body.dark .simple-auto-summary h3{color:#d4eadd}
+@media(max-width:520px){.simple-ayah-range{grid-template-columns:1fr}.simple-auto-summary>div{align-items:flex-start;flex-direction:column;gap:2px}.simple-auto-summary b{text-align:right}}
