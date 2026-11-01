@@ -43,6 +43,7 @@ export function buildMentorSnapshot(data,date=todayKey()){
   const unreviewed=activeStageSurahs.filter(s=>!reviewHistory.some(a=>recorded.some(u=>u.id===a.unitId && Number(u.surah)===s)));
   return {
     date,stage:{id:stage.id,title:stage.title,newMemorization:stage.newMemorization},
+    dailyMinutes:Math.max(10,Math.min(120,Number(data.settings?.dailyMinutes)||30)),
     trackedSurahs:recordedSurahs.length,trackedSurahNumbers:recordedSurahs.slice(0,114),
     currentStageSurahs:activeStageSurahs.length,
     unreviewedStageSurahs:unreviewed.slice(0,8),
@@ -75,7 +76,9 @@ export function generateMentorPlan(snapshot) {
     tasks.push({type:'session',surah:snapshot.nextSession.surahs[0]||null,
       title:'استعد للتسميع'+(names?' — '+names:''),reason:'الموعد المسجل: '+snapshot.nextSession.date});
   }
-  return tasks.slice(0,5);
+  const selected=tasks.slice(0,4),weights=tasks.slice(0,4).map((_,i)=>[4,3,2,1][i]);
+  const total=weights.reduce((sum,x)=>sum+x,0)||1;
+  return selected.map((task,i)=>({...task,minutes:Math.max(3,Math.round(snapshot.dailyMinutes*weights[i]/total))}));
 }
 
 export function answerMentorLocally(snapshot,question){
@@ -98,7 +101,7 @@ export function answerMentorLocally(snapshot,question){
       (snapshot.stage.newMemorization?'إذا أنهيت مراجعاتك، سجّل مقطع الحفظ الجديد فقط بعد ما تحفظه فعلًا. ':'هالمرحلة مخصصة لتثبيت المحفوظ السابق، مو لإضافة حفظ جديد إجباري. ')+
       (suggested?'سورة مقترحة للبدء: '+surahName(suggested)+'.':'');
   }
-  if(plan.length)return 'اقتراحي لوردك اليوم: '+plan.slice(0,3).map((t,i)=>(i+1)+') '+t.title+' — '+t.reason).join('؛ ')+'. سجّل فقط اللي أنجزته فعلًا.';
+  if(plan.length)return 'اقتراحي لوردك اليوم: '+plan.slice(0,3).map((t,i)=>(i+1)+') '+t.title+' ('+t.minutes+' دقيقة) — '+t.reason).join('؛ ')+'. سجّل فقط اللي أنجزته فعلًا.';
   return 'اليوم ما في مراجعات مستحقة موثقة. سجّل السور اللي حافظها أو راجعتها فعلًا، حتى أقدر أعمل لك وردًا أدق. ما رح أفترض إتقان أي جزء من السجلات العامة.';
 }
 
@@ -109,7 +112,7 @@ export function mentorModelPayload(snapshot,question){
   return {
     question:prompt,
     context:{
-      date:snapshot.date,stage:snapshot.stage.title,
+      date:snapshot.date,stage:snapshot.stage.title,dailyMinutes:snapshot.dailyMinutes,
       trackedSurahs:snapshot.trackedSurahs,reviewsLast7:snapshot.reviewsLast7,
       due:snapshot.due.slice(0,6).map(x=>({name:x.name,date:x.date,rating:x.rating})),
       weakSurahs:snapshot.weakSurahs.slice(0,6).map(x=>({name:x.name,rating:x.rating})),
