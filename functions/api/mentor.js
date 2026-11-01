@@ -13,7 +13,7 @@ function reply(json,status=200){
     'Cache-Control':'no-store, max-age=0',
     'X-Content-Type-Options':'nosniff',
     'Referrer-Policy':'no-referrer',
-    'Access-Control-Allow-Origin':'none'
+    'Vary':'Origin'
   }});
 }
 
@@ -44,7 +44,7 @@ export function sanitizeMentorRequest(payload){
   const nextSession=c.nextSession&&typeof c.nextSession==='object'
     ? {date:text(c.nextSession.date),surahs:Array.isArray(c.nextSession.surahs)?c.nextSession.surahs.slice(0,5).map(text):[]} : null;
   return {question,context:{
-    date:text(c.date),stage:text(c.stage),trackedSurahs:num(c.trackedSurahs),
+    date:text(c.date),stage:text(c.stage),dailyMinutes:Math.max(10,Math.min(120,num(c.dailyMinutes)||30)),trackedSurahs:num(c.trackedSurahs),
     reviewsLast7:num(c.reviewsLast7),quizAttempts:num(c.quizAttempts),
     due,weakSurahs,weakAyahs,nextSession
   }};
