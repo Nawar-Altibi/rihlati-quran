@@ -49,7 +49,9 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     if(segments.some(s=>!chapterCache.has(s.surah))) return '<div class="mushaf-loading" role="status"><span class="mushaf-loading-mark">۞</span><p>جارٍ تحميل آيات الصفحة...</p></div>';
     try {
       return mushafPageVerses(page,chapterCache).filter(group=>!selfTest?.passage || group.surah===selfTest.passage.surah).map(group=>{
-        const title='<div class="mushaf-surah-heading"><span>۞</span><h3>سورة '+escapeHTML(group.name)+'</h3><small>الآيات '+group.fromAyah+'–'+group.toAyah+'</small></div>';
+        const range=selfTest?.passage?selfTest.passage:null;
+        const from=range?range.startAyah:group.fromAyah,to=range?range.endAyah:group.toAyah;
+        const title='<div class="mushaf-surah-heading"><span>۞</span><h3>سورة '+escapeHTML(group.name)+'</h3><small>الآيات '+from+'–'+to+'</small></div>';
         const visibleGroup=selfTest?.passage ? group.verses.filter(v=>v.ayah>=selfTest.passage.startAyah&&v.ayah<=selfTest.passage.endAyah) : group.verses;
         const verses=visibleGroup.map(v=>{
           const testing=Boolean(selfTest && selfTest.page===page);
