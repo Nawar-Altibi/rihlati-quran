@@ -140,3 +140,56 @@ body.dark .simple-auto-summary h3{color:#d4eadd}
   .simple-surah-grid{gap:7px}
   .simple-surah{padding:10px 12px}
 }
+
+
+/* Embedded Hafs Mushaf reader — rendered verse text (not a page facsimile). */
+.mushaf-hero{background:linear-gradient(125deg,#164c3a,#256c53);color:#fff;border-radius:22px;padding:25px 31px;margin-bottom:13px;min-height:132px;position:relative;display:flex;justify-content:space-between;overflow:hidden}
+.mushaf-hero h1{font-size:30px;line-height:1.35;margin:5px 0}
+.mushaf-hero p{color:#e4eee7;margin:0;font-size:14px}
+.mushaf-hero .simple-kicker{color:#ebd3a0}
+.mushaf-hero-symbol{position:absolute;font-size:150px;font-family:Amiri,serif;opacity:.09;left:20px;top:-20px;pointer-events:none}
+.mushaf-toolbar{display:grid;grid-template-columns:1.25fr 1.25fr .55fr auto;align-items:end;gap:10px;background:var(--surface);border:1px solid var(--line);padding:15px 17px;border-radius:16px;margin-bottom:13px}
+.mushaf-toolbar label{display:flex;flex-direction:column;gap:3px;min-width:0;font-size:12px;color:var(--muted)}
+.mushaf-toolbar .input,.mushaf-toolbar .select{width:100%;min-width:0}
+.mushaf-go{white-space:nowrap;height:42px}
+.mushaf-shell{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(225px,.65fr);gap:15px;align-items:start}
+.mushaf-reader{min-width:0}
+.mushaf-page-controls{display:flex;justify-content:space-between;gap:10px;align-items:center;background:var(--surface);padding:10px 12px;border-radius:14px 14px 0 0;border:1px solid var(--line);border-bottom:0}
+.mushaf-page-controls button{white-space:nowrap;font-size:12px;padding:8px 11px}
+.mushaf-page-controls button:disabled,.mushaf-bottom-controls button:disabled{opacity:.4;cursor:not-allowed}
+.mushaf-page-jump{display:flex;align-items:center;gap:8px;justify-content:center}
+.mushaf-page-jump span{white-space:nowrap;font-size:13px;color:var(--muted)}
+.mushaf-page-jump .input{max-width:80px;text-align:center;font-size:14px;padding:5px}
+.mushaf-paper{background:#fffdf6;color:#243429;border:1px solid #e3dcc5;box-shadow:0 10px 30px #192d2810;min-height:560px;padding:22px 25px 12px;border-radius:0 0 15px 15px}
+.mushaf-page-top,.mushaf-page-foot{display:flex;justify-content:space-between;gap:10px;color:#547664;font-family:Amiri,serif;font-size:14px}
+.mushaf-page-top{border-bottom:1px solid #e7ddc6;padding-bottom:11px}
+.mushaf-page-foot{border-top:1px solid #e7ddc6;padding-top:10px;margin-top:25px}
+.mushaf-surah-heading{display:flex;align-items:center;justify-content:center;gap:11px;text-align:center;border-top:1px solid #d4c29d;border-bottom:1px solid #d4c29d;padding:8px 10px;margin:22px 0;color:#1c5c46}
+.mushaf-surah-heading h3{font-family:Amiri,serif;font-size:25px;margin:0}
+.mushaf-surah-heading span{font-size:22px}
+.mushaf-surah-heading small{color:#637b6b}
+.mushaf-verses{direction:rtl;text-align:justify;line-height:2.6}
+.mushaf-verse{display:inline;background:transparent;border:0;color:#28382f;font-family:Amiri,serif;font-size:25px;line-height:2.6;text-align:right;padding:3px 4px;cursor:pointer;word-break:normal;white-space:normal;border-radius:8px}
+.mushaf-verse:hover,.mushaf-verse:focus-visible{background:#e5eee3;outline:2px solid #83b2a1;outline-offset:2px}
+.mushaf-verse.selected{background:#e8f0e7}
+.mushaf-verse-text{font-family:Amiri,serif;unicode-bidi:plaintext}
+.mushaf-verse-number{display:inline-flex;align-items:center;justify-content:center;white-space:nowrap;color:#24705b;font-size:15px;margin-right:4px;vertical-align:middle;letter-spacing:0}
+.mushaf-bottom-controls{display:none}
+.mushaf-side{display:flex;flex-direction:column;gap:13px;position:sticky;top:20px}
+.mushaf-side-card{border:1px solid var(--line);border-radius:16px;padding:20px;background:var(--surface)}
+.mushaf-side-card h2{margin:4px 0;font-family:Amiri,serif;font-size:27px;color:var(--green)}
+.mushaf-side-card h3{font-size:16px;margin:0 0 12px}
+.mushaf-side-card p{color:var(--muted);font-size:13px;line-height:1.9;margin:7px 0 15px}
+.mushaf-side-card button{display:block;width:100%;margin-top:10px;font-size:13px}
+.mushaf-side-card .mushaf-note{font-size:12px;background:var(--surface2);padding:10px;border-radius:9px;margin:9px 0 0}
+.mushaf-attribution{margin:17px 0 5px;font-size:11px;color:var(--muted);line-height:2}
+.mushaf-attribution a{color:var(--green);text-decoration:underline}
+.mushaf-loading,.mushaf-error{min-height:350px;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px;color:#47705b;text-align:center}
+.mushaf-loading-mark{font-family:Amiri,serif;font-size:63px}
+.mushaf-error p{font-size:13px;max-width:460px}
+body.dark .mushaf-paper{background:#efe7d3;color:#263b31}
+body.dark .mushaf-verse,body.dark .mushaf-verse-text{color:#24362b}
+body.dark .mushaf-verse.selected{background:#d5e4d0}
+@media(max-width:1190px){.mushaf-shell{grid-template-columns:minmax(0,1fr)}.mushaf-side{position:static;display:grid;grid-template-columns:1fr 1fr}.mushaf-paper{min-height:430px}}
+@media(max-width:760px){.mushaf-hero{padding:20px;min-height:116px}.mushaf-hero h1{font-size:24px}.mushaf-toolbar{grid-template-columns:1fr 1fr;padding:12px;gap:9px}.mushaf-surah-choice{grid-column:1 / 2}.mushaf-toolbar .mushaf-go{height:41px}.mushaf-paper{padding:18px 13px 10px}.mushaf-verse{font-size:23px;line-height:2.5}.mushaf-side{grid-template-columns:1fr}.mushaf-page-controls{gap:5px;padding:8px}.mushaf-page-controls button{font-size:11px;padding:7px}.mushaf-page-jump{gap:4px}.mushaf-page-jump .input{max-width:54px;padding:4px}.mushaf-page-jump span{font-size:11px}.mushaf-page-jump .small-btn{display:none}.mushaf-bottom-controls{display:flex;justify-content:space-between;gap:9px;margin:12px 0}.mushaf-bottom-controls button{min-width:38%}}
+@media(max-width:420px){.mushaf-toolbar{grid-template-columns:1fr}.mushaf-surah-choice{grid-column:auto}.mushaf-ayah-choice{max-width:180px}.mushaf-go{width:100%}.mushaf-page-controls>button{max-width:100px;white-space:normal}.mushaf-page-top,.mushaf-page-foot{font-size:12px}.mushaf-surah-heading{gap:5px}.mushaf-surah-heading h3{font-size:22px}.mushaf-verse{font-size:21px}}
