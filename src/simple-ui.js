@@ -3,6 +3,7 @@ import { todayKey, addDays } from './logic.js';
 import { SURAH_NAMES } from './data.js';
 import { normalizeArabicSearch } from './quran-metadata.js';
 import { createMemorizeUI } from './memorize-ui.js';
+import { quizSummary } from './quiz-core.js';
 
 const esc = text => String(text ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const fmt = day => day ? new Intl.DateTimeFormat('ar', { day:'numeric', month:'short' }).format(new Date(day + 'T12:00:00')) : 'غير محدد';
@@ -10,7 +11,7 @@ const weekNames = ['الأحد','الإثنين','الثلاثاء','الأرب�
 const statusText = unit => !unit ? 'لم تبدأ مراجعتها' : unit.lastRating === 'متقن' ? 'مراجعة ممتازة' : unit.lastRating === 'أخطاء بسيطة' ? 'جيدة' : unit.lastRating === 'يحتاج مراجعة' || unit.lastRating === 'ضعيف' ? 'تحتاج تثبيت' : 'بانتظار أول تقييم';
 const btn = (action, label, klass = 'primary', id = '') => '<button class="' + klass + '" type="button" data-action="' + action + '"' + (id ? ' data-id="' + esc(id) + '"' : '') + '>' + label + '</button>';
 
-export function createSimpleUI({ getData, persist, toast, openModal, navigate, render, openMemorizeModal, openMushafSurah, openMushaf }) {
+export function createSimpleUI({ getData, persist, toast, openModal, navigate, render, openMemorizeModal, openMushafSurah, openMushaf, startQuiz }) {
   const d = () => getData();
   const memo = createMemorizeUI({getData,persist,toast,openModal,render});
   const savedReview = n => d().activities.some(a => a.type === 'revision' && a.date === todayKey() && d().units.some(u => u.id === a.unitId && Number(u.surah) === n));
@@ -32,7 +33,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     const suggested = activeSurahs[0] || stage.surahs[0];
     const dueHtml = due.length ? due.slice(0,5).map(r => '<div class="simple-due-row"><div><b>' + esc(r.title) + '</b><small>' + (r.dueDate < todayKey() ? 'متأخرة منذ ' : 'مستحقة ') + fmt(r.dueDate) + '</small></div>' + btn('simple-review-one', 'سجّل مراجعتها', 'secondary small-btn', String(data.units.find(u => u.id === r.unitId)?.surah || '')) + '</div>').join('') : '<p class="simple-muted">ما عندك مراجعات مجدولة مستحقة الآن. فيك تراجع أي سورة بدك ياها وتسجلها.</p>';
     return '<section class="simple-hero"><div><div class="simple-kicker">وردك اليوم · ' + fmt(todayKey()) + '</div><h1>السلام عليكم ورحمة الله وبركاته</h1><p>خطوة صغيرة كل يوم، وحفظ أثبت بإذن الله.</p><span class="simple-phase-tag">' + esc(stage.title) + '</span></div><div class="simple-hero-flower" aria-hidden="true">۞</div></section>' +
-    '<section class="simple-main-actions"><div class="simple-primary-card"><div class="simple-kicker">سجّل إنجازك بخطوة واحدة</div><h2>شو عملت اليوم؟</h2><p>اختار السور اللي راجعتها واحفظها سوا، حتى لو كانت مراجعة إضافية قبل موعدها.</p><div class="simple-actions">' + btn('simple-review-open', '✓ راجعت', 'primary') + btn('simple-memorize', '＋ حفظت', 'secondary') + btn('simple-teacher-now', '◉ سمّعت', 'secondary') + btn('simple-open-mushaf', '◈ افتح المصحف', 'secondary') + '</div></div><div class="simple-side-card"><div class="simple-kicker">المرحلة الحالية</div><h3>' + esc(stage.title) + '</h3><p>' + esc(stage.description) + '</p>' + (suggested ? '<div class="simple-tip">مقترح للبدء: سورة ' + esc(surahName(suggested)) + '</div>' : '') + btn('simple-plan-link', 'افتح خطة القرآن', 'secondary small-btn') + '</div></section>' +
+    '<section class="simple-main-actions"><div class="simple-primary-card"><div class="simple-kicker">سجّل إنجازك بخطوة واحدة</div><h2>شو عملت اليوم؟</h2><p>اختار السور اللي راجعتها واحفظها سوا، حتى لو كانت مراجعة إضافية قبل موعدها.</p><div class="simple-actions">' + btn('simple-review-open', '✓ راجعت', 'primary') + btn('simple-memorize', '＋ حفظت', 'secondary') + btn('simple-teacher-now', '◉ سمّعت', 'secondary') + btn('simple-open-mushaf', '◈ افتح المصحف', 'secondary') + btn('simple-quiz-random', '⚡ اختبر حفظي', 'secondary') + '</div></div><div class="simple-side-card"><div class="simple-kicker">المرحلة الحالية</div><h3>' + esc(stage.title) + '</h3><p>' + esc(stage.description) + '</p>' + (suggested ? '<div class="simple-tip">مقترح للبدء: سورة ' + esc(surahName(suggested)) + '</div>' : '') + btn('simple-plan-link', 'افتح خطة القرآن', 'secondary small-btn') + '</div></section>' +
     '<section class="simple-overview"><div class="simple-panel"><h2>مراجعاتك المستحقة <span class="simple-count">' + due.length + '</span></h2>' + dueHtml + '</div><div class="simple-panel"><h2>تسميعك القادم</h2>' + (next ? '<p>موعد ' + fmt(next.date) + ' · ' + (next.surahs || [next.surah]).filter(Boolean).map(surahName).join('، ') + '</p>' : '<p class="simple-muted">لسه ما حددت جلسة تسميع. اختار يوم يناسبك وصاحبك.</p>') + btn('simple-teacher-schedule', 'جدولة تسميع', 'secondary small-btn') + '<div class="simple-today-count">أنشطة اليوم المسجلة: <b>' + activities.length + '</b></div></div></section>';
   }
 
@@ -56,9 +57,11 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
 
   function progressView() {
     const data = d(), active = data.activities.filter(a=>a.completed), uniqueDays = new Set(active.map(a=>a.date)), reviews = active.filter(a=>a.type==='revision'), sessions = data.sessions.filter(s=>s.date), weak = data.units.filter(u=>u.lastRating === 'ضعيف' || u.lastRating === 'يحتاج مراجعة');
+    const quiz=quizSummary(data);
     const recent = [...active].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
     return '<header class="simple-page-heading"><div><div class="simple-kicker">نتيجة الاستمرار</div><h1>تقدمي</h1><p>إنجازات سجلتها بالفعل، وليس تخمينًا عن المحفوظ السابق.</p></div></header>' +
     '<div class="simple-metrics"><div><strong>' + uniqueDays.size + '</strong><span>يوم نشاط</span></div><div><strong>' + reviews.length + '</strong><span>مراجعة مسجلة</span></div><div><strong>' + sessions.length + '</strong><span>جلسة تسميع</span></div><div><strong>' + weak.length + '</strong><span>سورة تحتاج تثبيت</span></div></div>' +
+    '<div class="simple-panel simple-quiz-summary"><h2>اختبار الحفظ الذاتي</h2><p>اختبارات سجّلت نتائجها: <strong>'+quiz.attempts+'</strong> · مواضع أخطاء مختلفة: <strong>'+quiz.mistakeLocations+'</strong>. العدد لا يعني إتقان الحفظ.</p>'+(quiz.weakLocations.length?'<div class="simple-weak-list"><b>مواضع تحتاج تثبيت</b>'+quiz.weakLocations.slice(0,5).map(item=>'<span>سورة '+esc(surahName(item.surah))+' · الآية '+item.ayah+(item.count>1?' · تكرر '+item.count+' مرة':'')+'</span>').join('')+'</div>':'')+'<div class="simple-actions">'+btn('simple-quiz-random','اختبر حفظي','secondary')+(quiz.weakLocations.length?btn('simple-quiz-weak','اختبر مواضع ضعفي','secondary'):'')+'</div></div>'+ 
     '<div class="simple-panel"><h2>آخر أنشطتك</h2>' + (recent.length ? recent.map(a=>'<div class="simple-due-row"><div><b>' + (a.type==='revision' ? 'مراجعة ' + esc(surahName(data.units.find(u=>u.id===a.unitId)?.surah)) : a.type==='session' ? 'تسميع' : a.type==='memorization' ? 'حفظ' : 'نشاط') + '</b><small>' + fmt(a.date) + (a.rating ? ' · ' + esc(a.rating) : '') + '</small></div></div>').join('') : '<p class="simple-muted">لسه ما سجلت نشاطات. أول مراجعة رح تظهر هون.</p>') + '</div>' +
     '<div class="simple-panel"><h2>تفاصيل إضافية</h2><p class="simple-muted">التقويم والإحصائيات التفصيلية متاحة في الخيارات المتقدمة.</p><div class="simple-actions">' + btn('simple-calendar-link', 'التقويم', 'secondary small-btn') + btn('simple-analytics-link', 'الإحصائيات', 'secondary small-btn') + '</div></div>';
   }
@@ -115,6 +118,8 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
       case 'simple-review-one': openReview([Number(id)]); return true;
       case 'simple-read-surah': openMushafSurah(Number(id)); return true;
       case 'simple-open-mushaf': openMushaf(); return true;
+      case 'simple-quiz-random': startQuiz('random'); return true;
+      case 'simple-quiz-weak': startQuiz('weak'); return true;
       case 'simple-memorize': memo.open(); return true;
       case 'simple-teacher-schedule': openGroupPlan(); return true;
       case 'simple-teacher-now': openGroupPlan(true); return true;

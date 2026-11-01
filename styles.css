@@ -225,3 +225,26 @@ body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{backgroun
   .mushaf-test-actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch}
   .mushaf-test-actions button{min-height:51px;max-width:100%;min-width:0;white-space:normal;line-height:1.5}
 }
+
+
+/* Smart self-assessed Quran quizzes: no false mastery, compact in the Mushaf. */
+.mushaf-quiz-launch{border:1px solid var(--line);background:var(--surface2);padding:12px 13px;border-radius:12px;margin:13px 0}
+.mushaf-quiz-launch>b{display:block;font-size:14px;color:var(--green);margin-bottom:3px}
+.mushaf-quiz-launch>p{margin:4px 0 9px!important;font-size:12px!important;line-height:1.6!important}
+.mushaf-side-card .mushaf-quiz-launch button{width:100%;font-size:12px;margin-top:6px;min-height:38px}
+.mushaf-quiz-actions{border-top:1px solid #a5c5ae77;margin-top:12px;padding-top:12px;display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center}
+.mushaf-quiz-actions b,.mushaf-quiz-actions small{display:block}
+.mushaf-quiz-actions b{font-size:13px;color:var(--green)}
+.mushaf-quiz-actions small{font-size:11px;color:var(--muted);line-height:1.6;margin-top:2px}
+.mushaf-quiz-actions button{padding:9px 12px;font-size:12px;min-height:42px;white-space:normal}
+.mushaf-quiz-actions button:disabled{opacity:.48;cursor:not-allowed}
+.simple-quiz-summary{padding:17px 22px}
+.simple-quiz-summary h2{margin:0 0 5px;font-size:17px}
+.simple-quiz-summary p{margin:0}
+@media(max-width:1050px){.mushaf-quiz-actions{grid-template-columns:1fr 1fr}.mushaf-quiz-actions>div{grid-column:span 2}}
+@media(max-width:580px){.mushaf-quiz-actions{grid-template-columns:1fr}.mushaf-quiz-actions>div{grid-column:span 1}.mushaf-quiz-actions button{width:100%}}
+
+
+.simple-weak-list{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin-top:9px;border-top:1px solid var(--line);padding-top:11px}
+.simple-weak-list>b{display:block;width:100%;font-size:13px;color:var(--green)}
+.simple-weak-list span{font-size:12px;padding:6px 9px;border:1px solid var(--line);background:var(--surface2);border-radius:9px}
