@@ -103,6 +103,26 @@ test('weak-ayah test actively includes recorded mistaken Ayah',()=>{
   assert.ok(weak.endAyah>=p.startAyah+2);
   assert.equal(getQuizMistakeCounts(data).get('80:'+(p.startAyah+2)),1);
 });
+test('self-assessed progress reports only the exact recorded mistake locations',()=>{
+  const data=empty();const u=unit(80,1,6);data.units.push(u);
+  const p=chooseQuizPassage(data,{rng:()=>0});
+  recordQuizAttempt(data,p,[1,3],id);
+  recordQuizAttempt(data,p,[3],id);
+  const summary=quizSummary(data);
+  assert.equal(summary.attempts,2);
+  assert.equal(summary.mistakeLocations,2);
+  assert.deepEqual(summary.weakLocations[0],{surah:80,ayah:3,count:2});
+  assert.deepEqual(summary.weakLocations[1],{surah:80,ayah:1,count:1});
+});
+test('random mode can target a previously missed Ayah within a larger covered section',()=>{
+  const data=empty();data.units.push(unit(80,1,20));
+  const first=chooseQuizPassage(data,{rng:()=>0,length:6});
+  recordQuizAttempt(data,first,[first.startAyah+4],id);
+  const next=chooseQuizPassage(data,{rng:()=>0,length:6});
+  assert.ok(next.startAyah<=first.startAyah+4);
+  assert.ok(next.endAyah>=first.startAyah+4);
+});
+
 test('quiz attempt history survives legacy v2 data migration without replacing records',()=>{
   const data=empty();delete data.quizAttempts;
   const unitId=data.units[0].id;
