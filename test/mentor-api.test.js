@@ -64,6 +64,16 @@ test('global 12-call daily limit prevents a 13th AI inference even with valid to
   assert.equal(modelCalls,12);
   assert.equal(db.calls,12);
 });
+test('GPT-OSS model reply uses choices.message.content, excluding private reasoning',async()=>{
+  const env={MENTOR_QUOTA_DB:mockQuota(),MENTOR_ACCESS_TOKEN:secret,
+    AI:{run:async()=>({choices:[{message:{content:'راجع سورة عبس، الآية ٥.',reasoning:'PRIVATE_INTERNAL_REASONING',reasoning_content:'PRIVATE_INTERNAL_REASONING'}}]})}};
+  const r=await onRequestPost({request:request(),env});
+  assert.equal(r.status,200);
+  const body=await r.json();
+  assert.equal(body.answer,'راجع سورة عبس، الآية ٥.');
+  assert.equal(JSON.stringify(body).includes('PRIVATE_INTERNAL_REASONING'),false);
+});
+
 test('no quota DB = no AI inference; GET requests are not accepted',async()=>{
   const env={MENTOR_ACCESS_TOKEN:secret,AI:{run:async()=>{throw Error('must not run');}}};
   assert.equal((await onRequestPost({request:request(),env})).status,503);
