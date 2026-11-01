@@ -193,3 +193,28 @@ body.dark .mushaf-verse.selected{background:#d5e4d0}
 @media(max-width:1190px){.mushaf-shell{grid-template-columns:minmax(0,1fr)}.mushaf-side{position:static;display:grid;grid-template-columns:1fr 1fr}.mushaf-paper{min-height:430px}}
 @media(max-width:760px){.mushaf-hero{padding:20px;min-height:116px}.mushaf-hero h1{font-size:24px}.mushaf-toolbar{grid-template-columns:1fr 1fr;padding:12px;gap:9px}.mushaf-surah-choice{grid-column:1 / 2}.mushaf-toolbar .mushaf-go{height:41px}.mushaf-paper{padding:18px 13px 10px}.mushaf-verse{font-size:23px;line-height:2.5}.mushaf-side{grid-template-columns:1fr}.mushaf-page-controls{gap:5px;padding:8px}.mushaf-page-controls button{font-size:11px;padding:7px}.mushaf-page-jump{gap:4px}.mushaf-page-jump .input{max-width:54px;padding:4px}.mushaf-page-jump span{font-size:11px}.mushaf-page-jump .small-btn{display:none}.mushaf-bottom-controls{display:flex;justify-content:space-between;gap:9px;margin:12px 0}.mushaf-bottom-controls button{min-width:38%}}
 @media(max-width:420px){.mushaf-toolbar{grid-template-columns:1fr}.mushaf-surah-choice{grid-column:auto}.mushaf-ayah-choice{max-width:180px}.mushaf-go{width:100%}.mushaf-page-controls>button{max-width:100px;white-space:normal}.mushaf-page-top,.mushaf-page-foot{font-size:12px}.mushaf-surah-heading{gap:5px}.mushaf-surah-heading h3{font-size:22px}.mushaf-verse{font-size:21px}}
+
+
+/* Progressive Quran memorization self-test: text is only revealed when asked. */
+.mushaf-mode-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 16px;background:var(--surface);border:1px solid var(--line);border-bottom:0}
+.mushaf-mode-bar button{font-size:13px;min-height:39px}
+.mushaf-mode-bar span{font-size:12px;color:var(--muted);text-align:left}
+.mushaf-test-panel{background:var(--green-soft);border:1px solid #b5ccbe;border-bottom:0;padding:15px 17px;display:flex;flex-direction:column;gap:10px}
+.mushaf-test-status{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.mushaf-test-status b{font-size:15px;color:var(--green)}
+.mushaf-test-status span,.mushaf-test-panel>small{color:var(--muted);font-size:12px}
+.mushaf-test-actions{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.mushaf-test-actions button{font-size:12px;min-height:38px;padding:8px 11px}
+.mushaf-test-actions button:disabled{opacity:.45;cursor:not-allowed}
+.mushaf-verses.is-test-mode{display:flex;flex-direction:column;align-items:stretch;gap:8px;line-height:1.8}
+.mushaf-verses.is-test-mode .mushaf-verse{display:flex;align-items:center;justify-content:space-between;gap:10px;text-align:right;line-height:2;min-height:50px;padding:10px 12px;background:#faf7ec;border:1px solid #e6dfcd;border-radius:9px;font-size:24px}
+.mushaf-verses.is-test-mode .mushaf-verse:hover{background:#e8efe6}
+.mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{border:2px solid #34866b;background:#e7f1e7}
+.mushaf-verses.is-test-mode .mushaf-verse.is-concealed:not(.is-testing-current){opacity:.76}
+.mushaf-masked-verse{font:600 24px/1.6 'IBM Plex Sans Arabic',sans-serif;letter-spacing:4px;color:#9eaf9c}
+.mushaf-verse-number{flex-shrink:0}
+.mushaf-visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+body.dark .mushaf-test-panel{background:#204839;border-color:#3d765c}
+body.dark .mushaf-verses.is-test-mode .mushaf-verse{background:#f7f1e6;border-color:#d7cbb3;color:#24382d}
+body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{background:#e1eedd}
+@media(max-width:760px){.mushaf-mode-bar,.mushaf-test-status{flex-direction:column;align-items:stretch}.mushaf-mode-bar span{text-align:right}.mushaf-test-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.mushaf-test-actions button{white-space:normal;padding:9px 6px}.mushaf-test-actions button:nth-child(2){grid-column:span 2;grid-row:1;font-size:15px}.mushaf-verses.is-test-mode .mushaf-verse{font-size:21px}.mushaf-masked-verse{font-size:20px}}
