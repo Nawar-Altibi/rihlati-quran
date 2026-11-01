@@ -61,7 +61,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     const recent = [...active].sort((a,b)=>String(b.date).localeCompare(String(a.date))).slice(0,15);
     return '<header class="simple-page-heading"><div><div class="simple-kicker">نتيجة الاستمرار</div><h1>تقدمي</h1><p>إنجازات سجلتها بالفعل، وليس تخمينًا عن المحفوظ السابق.</p></div></header>' +
     '<div class="simple-metrics"><div><strong>' + uniqueDays.size + '</strong><span>يوم نشاط</span></div><div><strong>' + reviews.length + '</strong><span>مراجعة مسجلة</span></div><div><strong>' + sessions.length + '</strong><span>جلسة تسميع</span></div><div><strong>' + weak.length + '</strong><span>سورة تحتاج تثبيت</span></div></div>' +
-    '<div class="simple-panel simple-quiz-summary"><h2>اختبار الحفظ الذاتي</h2><p>اختبارات سجّلت نتائجها: <strong>'+quiz.attempts+'</strong> · مواضع أخطاء مختلفة: <strong>'+quiz.mistakeLocations+'</strong>. العدد لا يعني إتقان الحفظ.</p><div class="simple-actions">'+btn('simple-quiz-random','اختبر حفظي','secondary')+'</div></div>'+ 
+    '<div class="simple-panel simple-quiz-summary"><h2>اختبار الحفظ الذاتي</h2><p>اختبارات سجّلت نتائجها: <strong>'+quiz.attempts+'</strong> · مواضع أخطاء مختلفة: <strong>'+quiz.mistakeLocations+'</strong>. العدد لا يعني إتقان الحفظ.</p>'+(quiz.weakLocations.length?'<div class="simple-weak-list"><b>مواضع تحتاج تثبيت</b>'+quiz.weakLocations.slice(0,5).map(item=>'<span>سورة '+esc(surahName(item.surah))+' · الآية '+item.ayah+(item.count>1?' · تكرر '+item.count+' مرة':'')+'</span>').join('')+'</div>':'')+'<div class="simple-actions">'+btn('simple-quiz-random','اختبر حفظي','secondary')+(quiz.weakLocations.length?btn('simple-quiz-weak','اختبر مواضع ضعفي','secondary'):'')+'</div></div>'+ 
     '<div class="simple-panel"><h2>آخر أنشطتك</h2>' + (recent.length ? recent.map(a=>'<div class="simple-due-row"><div><b>' + (a.type==='revision' ? 'مراجعة ' + esc(surahName(data.units.find(u=>u.id===a.unitId)?.surah)) : a.type==='session' ? 'تسميع' : a.type==='memorization' ? 'حفظ' : 'نشاط') + '</b><small>' + fmt(a.date) + (a.rating ? ' · ' + esc(a.rating) : '') + '</small></div></div>').join('') : '<p class="simple-muted">لسه ما سجلت نشاطات. أول مراجعة رح تظهر هون.</p>') + '</div>' +
     '<div class="simple-panel"><h2>تفاصيل إضافية</h2><p class="simple-muted">التقويم والإحصائيات التفصيلية متاحة في الخيارات المتقدمة.</p><div class="simple-actions">' + btn('simple-calendar-link', 'التقويم', 'secondary small-btn') + btn('simple-analytics-link', 'الإحصائيات', 'secondary small-btn') + '</div></div>';
   }
@@ -119,6 +119,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
       case 'simple-read-surah': openMushafSurah(Number(id)); return true;
       case 'simple-open-mushaf': openMushaf(); return true;
       case 'simple-quiz-random': startQuiz('random'); return true;
+      case 'simple-quiz-weak': startQuiz('weak'); return true;
       case 'simple-memorize': memo.open(); return true;
       case 'simple-teacher-schedule': openGroupPlan(); return true;
       case 'simple-teacher-now': openGroupPlan(true); return true;
