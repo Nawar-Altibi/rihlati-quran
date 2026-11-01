@@ -28,12 +28,12 @@ export function createMemorizeUI({getData,persist,toast,openModal,render}) {
         '<div><span>مقدار الحفظ التقريبي</span><b>نحو '+m.approximatePages+' صفحة</b></div>';
     }catch(err){box.textContent=err.message;}
   }
-  function updateVerseChoices() {
+  function updateVerseChoices(resetRange = false) {
     const s=Number(el('#simple-mem-surah')?.value), meta=SURAH_NAMES[s-1];
     const from=el('#simple-from-ayah'), to=el('#simple-to-ayah');
     if(!meta){refreshSummary();return;}
-    const a=Math.min(Math.max(1,Number(from.value)||1),meta.ayahs);
-    const b=Math.min(Math.max(1,Number(to.value)||meta.ayahs),meta.ayahs);
+    const a=resetRange?1:Math.min(Math.max(1,Number(from.value)||1),meta.ayahs);
+    const b=resetRange?meta.ayahs:Math.min(Math.max(1,Number(to.value)||meta.ayahs),meta.ayahs);
     from.innerHTML=verses(meta.ayahs,a);
     to.innerHTML=verses(meta.ayahs,b);
     refreshSummary();
@@ -64,10 +64,10 @@ export function createMemorizeUI({getData,persist,toast,openModal,render}) {
       const chosen=matches.some(s=>s.number===old)?old:(matches.length===1?matches[0].number:null);
       select.innerHTML='<option value="" disabled '+(chosen?'':'selected')+'>'+(matches.length?'اختر السورة من '+matches.length+' نتيجة':'لا توجد سور مطابقة')+'</option>'+options(matches,chosen);
       if(chosen)select.value=String(chosen);
-      updateVerseChoices();
+      updateVerseChoices(chosen!==old);
       return true;
     }
-    if(target.id==='simple-mem-surah'){updateVerseChoices();return true;}
+    if(target.id==='simple-mem-surah'){updateVerseChoices(true);return true;}
     if(['simple-from-ayah','simple-to-ayah'].includes(target.id)||target.name==='scope'){refreshSummary();return true;}
     return false;
   }
