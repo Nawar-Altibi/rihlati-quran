@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, feature/simple-daily-quran-flow, feature/embedded-mushaf-reader, feature/ayah-memorization-self-test]
+    branches: [main, feature/simple-daily-quran-flow, feature/embedded-mushaf-reader, feature/ayah-memorization-self-test, feature/enter-reveal-ayah]
   pull_request:
     branches: [main]
 jobs:

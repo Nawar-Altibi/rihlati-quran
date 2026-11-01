@@ -72,7 +72,7 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     const surahName=SURAH_NAMES[selectedSurah-1]?.name||start.name;
     const bookmark=getData().settings.mushafBookmark;
     const testProgress=getAyahTestProgress(selfTest);
-    const testControls=selfTest ? '<div class="mushaf-test-panel" aria-label="اختبار الحفظ الذاتي"><div class="mushaf-test-status" aria-live="polite"><b>اختبار الحفظ · الآية '+testProgress.position+' من '+testProgress.total+'</b><span>كشفت '+testProgress.revealed+' آية — اقرأ غيبًا قبل الكشف</span></div><div class="mushaf-test-actions"><button class="secondary" data-action="mushaf-test-prev"'+(testProgress.isFirst?' disabled':'')+'>الآية السابقة</button><button class="primary" data-action="mushaf-test-reveal"'+(isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?' disabled aria-label="هذه الآية مكشوفة بالفعل"':'')+'>اكشف الآية</button><button class="secondary" data-action="mushaf-test-next"'+(testProgress.isLast?' disabled':'')+'>الآية التالية</button><button class="secondary" data-action="mushaf-test-show-all">'+(selfTest.showAll?'إخفاء الكشف الكامل':'عرض جميع الآيات')+'</button><button class="secondary" data-action="mushaf-test-reset">ابدأ من جديد</button></div><small>'+(testProgress.isLast && isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?'أكملت كشف آيات هذه الصفحة. انتقل للصفحة التالية أو سجّل مراجعتك إذا انتهيت.':'اكشف الآية الحالية، وسينتقل الاختبار للآية التالية تلقائيًا. هذا تدريب ذاتي، وليس تقييمًا تلقائيًا للحفظ.')+'</small></div>' : '';
+    const testControls=selfTest ? '<div class="mushaf-test-panel" aria-label="اختبار الحفظ الذاتي"><div class="mushaf-test-status" aria-live="polite"><b>اختبار الحفظ · الآية '+testProgress.position+' من '+testProgress.total+'</b><span>كشفت '+testProgress.revealed+' آية — اقرأ غيبًا قبل الكشف</span></div><div class="mushaf-test-actions"><button class="secondary" data-action="mushaf-test-prev"'+(testProgress.isFirst?' disabled':'')+'>الآية السابقة</button><button class="primary" data-action="mushaf-test-reveal"'+(isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?' disabled aria-label="هذه الآية مكشوفة بالفعل"':'')+'>اكشف الآية</button><button class="secondary" data-action="mushaf-test-next"'+(testProgress.isLast?' disabled':'')+'>الآية التالية</button><button class="secondary" data-action="mushaf-test-show-all">'+(selfTest.showAll?'إخفاء الكشف الكامل':'عرض جميع الآيات')+'</button><button class="secondary" data-action="mushaf-test-reset">ابدأ من جديد</button></div><small>'+(testProgress.isLast && isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?'أكملت كشف آيات هذه الصفحة. انتقل للصفحة التالية أو سجّل مراجعتك إذا انتهيت.':'اضغط زر «اكشف الآية» أو اضغط Enter على الآية المخفية؛ بتنفتح الآية وبيصير التركيز على التالية تلقائيًا. هذا تدريب ذاتي وليس تقييمًا آليًا.')+'</small></div>' : '';
     return '<section class="mushaf-hero"><div><div class="simple-kicker">القرآن الكريم · رواية حفص</div><h1>المصحف</h1><p>اقرأ من حيث توقفت، واختبر حفظك، ثم سجّل المراجعة.</p></div><div class="mushaf-hero-symbol" aria-hidden="true">۞</div></section>'+
       '<section class="mushaf-toolbar" aria-label="أدوات التنقل بالمصحف">' +
       '<label class="mushaf-search"><span>ابحث عن السورة</span><input id="mushaf-surah-search" type="search" class="input" placeholder="اسم السورة أو رقمها" autocomplete="off"></label>'+
@@ -119,6 +119,15 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
       if(n===loadForPage && document.querySelector('#mushaf-page-body')) {error=e?.message||'تحقق من اتصال الإنترنت.';render();}
     });
   }
+  // Restore keyboard focus after rendering replaces the verse buttons.
+  // This lets a reader keep pressing Enter without returning to the mouse.
+  function focusActiveTestAyah() {
+    const active=document.querySelector('#mushaf-page-body .mushaf-verse.is-testing-current');
+    if(!active)return;
+    active.focus({preventScroll:true});
+    active.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
   function handleAction(action,target) {
     switch(action) {
       case 'mushaf-prev':setPage(page-1);return true;
@@ -132,8 +141,7 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
           const current=selfTest.ayahs[selfTest.currentIndex];
           selectedSurah=current.surah;selectedAyah=current.ayah;
           commitReading();render();
-          const active=document.querySelector('.mushaf-verse.is-testing-current');
-          active?.scrollIntoView({behavior:'smooth',block:'nearest'});
+          focusActiveTestAyah();
         }
         return true;
       case 'mushaf-test-prev':
@@ -141,21 +149,21 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
         if(selfTest){
           selfTest=moveTestCursor(selfTest,action==='mushaf-test-next'?1:-1);
           const current=selfTest.ayahs[selfTest.currentIndex];
-          selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();
+          selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();focusActiveTestAyah();
         }
         return true;
       case 'mushaf-test-show-all':
         if(selfTest){selfTest=toggleTestRevealAll(selfTest);render();}
         return true;
       case 'mushaf-test-reset':
-        if(selfTest){selfTest=resetAyahTest(selfTest);const current=selfTest.ayahs[0];selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();}
+        if(selfTest){selfTest=resetAyahTest(selfTest);const current=selfTest.ayahs[0];selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();focusActiveTestAyah();}
         return true;
       case 'mushaf-select-ayah':{
         const s=Number(target.dataset.surah), a=Number(target.dataset.ayah);
         if(selfTest){
           const index=selfTest.ayahs.findIndex(v=>v.surah===s&&v.ayah===a);
           if(index!==-1)selfTest={...selfTest,currentIndex:index,showAll:false};
-          selectedSurah=s;selectedAyah=a;commitReading();render();return true;
+          selectedSurah=s;selectedAyah=a;commitReading();render();focusActiveTestAyah();return true;
         }
         selectedSurah=s;selectedAyah=a;commitReading();
         document.querySelectorAll('.mushaf-verse.selected').forEach(v=>v.classList.remove('selected'));
@@ -197,7 +205,32 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     return true;
   }
   function handleKeydown(e){
-    if(e.key!=='Enter'||!['mushaf-page-number','mushaf-ayah-jump'].includes(e.target.id))return false;
+    if(e.key!=='Enter')return false;
+    if(e.repeat && selfTest && e.target.closest?.('#mushaf-page-body .mushaf-verse')){
+      e.preventDefault(); // Holding Enter must not skip multiple hidden verses.
+      return true;
+    }
+    if(e.repeat)return false;
+
+    // When an unrevealed Quran Ayah has keyboard focus, Enter behaves exactly
+    // like pressing "اكشف الآية". Stop the button's synthesized click so the
+    // next Ayah is not accidentally selected or skipped a second time.
+    const verse=e.target.closest?.('#mushaf-page-body .mushaf-verse[data-action="mushaf-select-ayah"]');
+    if(selfTest && verse){
+      const surah=Number(verse.dataset.surah),ayah=Number(verse.dataset.ayah);
+      const index=selfTest.ayahs.findIndex(v=>v.surah===surah&&v.ayah===ayah);
+      if(index>=0 && !isTestAyahVisible(selfTest,surah,ayah)){
+        e.preventDefault();
+        selfTest={...selfTest,currentIndex:index,showAll:false};
+        handleAction('mushaf-test-reveal',verse);
+        return true;
+      }
+      // Already-revealed verses retain their normal button keyboard behavior.
+      return false;
+    }
+
+    // Existing Enter shortcuts for page and Ayah number fields still work.
+    if(!['mushaf-page-number','mushaf-ayah-jump'].includes(e.target.id))return false;
     e.preventDefault();
     if(e.target.id==='mushaf-page-number')setPage(Number(e.target.value));
     else goToSurah(Number(document.querySelector('#mushaf-surah-select')?.value),Number(e.target.value));
