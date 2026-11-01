@@ -50,7 +50,7 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     try {
       return mushafPageVerses(page,chapterCache).filter(group=>!selfTest?.passage || group.surah===selfTest.passage.surah).map(group=>{
         const title='<div class="mushaf-surah-heading"><span>۞</span><h3>سورة '+escapeHTML(group.name)+'</h3><small>الآيات '+group.fromAyah+'–'+group.toAyah+'</small></div>';
-        const visibleGroup=selfTest?.passage ? group.verses.filter(v=>v.id>=selfTest.passage.startAyah&&v.id<=selfTest.passage.endAyah) : group.verses;
+        const visibleGroup=selfTest?.passage ? group.verses.filter(v=>v.ayah>=selfTest.passage.startAyah&&v.ayah<=selfTest.passage.endAyah) : group.verses;
         const verses=visibleGroup.map(v=>{
           const testing=Boolean(selfTest && selfTest.page===page);
           const currentKey=selfTest?.ayahs[selfTest.currentIndex]?.key;
