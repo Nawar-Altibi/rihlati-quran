@@ -126,3 +126,17 @@ body.dark .simple-tip,body.dark .simple-modal-hint{background:#1d4637;color:#d0e
 body.dark .simple-auto-summary{background:#204839;border-color:#48775c}
 body.dark .simple-auto-summary h3{color:#d4eadd}
 @media(max-width:520px){.simple-ayah-range{grid-template-columns:1fr}.simple-auto-summary>div{align-items:flex-start;flex-direction:column;gap:2px}.simple-auto-summary b{text-align:right}}
+
+
+/* More information in less empty space, without overcrowding the Arabic UI */
+@media(min-width:761px){
+  .simple-hero{padding:23px 27px;min-height:158px;margin-bottom:14px}
+  .simple-main-actions,.simple-overview{gap:12px;margin-bottom:12px}
+  .simple-primary-card,.simple-side-card,.simple-panel{padding:19px 21px}
+  .simple-primary-card h2,.simple-panel h2{margin:3px 0 8px}
+  .simple-actions{margin-top:13px}
+  .simple-overview .simple-panel{margin-bottom:8px}
+  .simple-page-heading{margin-bottom:16px}
+  .simple-surah-grid{gap:7px}
+  .simple-surah{padding:10px 12px}
+}
