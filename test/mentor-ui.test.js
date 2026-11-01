@@ -55,3 +55,26 @@ test('unconfigured cloud mode does not transmit records or attempt a network cal
     assert.match(html,/الإجابة المحلية/);
   }finally{globalThis.document=prevDoc;globalThis.fetch=prevFetch;}
 });
+
+
+test('deep-study consent is granular and local chat remains user-controlled',()=>{
+  const d=makeInitialData();d.units.push({id:'only-local',method:'ayah',surah:80,startAyah:1,endAyah:4,status:'محفوظ',note:'my personal note'});
+  const prevDoc=globalThis.document;
+  globalThis.document={querySelector:()=>null};
+  let ui,html;const render=()=>{html=ui.view();};
+  ui=createMentorUI({getData:()=>d,render,navigate:()=>{},openSurah:()=>{},openReview:()=>{},startQuiz:()=>{},toast:()=>{}});
+  try{
+    ui.handleChange({target:{id:'mentor-use-cloud',checked:true}});
+    assert.match(html,/mentor-share-study/);
+    assert.match(html,/mentor-share-notes/);
+    assert.match(html,/disabled/);
+    ui.handleChange({target:{id:'mentor-share-study',checked:true}});
+    ui.handleAction('mentor-preview-data',{});
+    assert.match(html,/&quot;activities&quot;/);
+    assert.equal(html.includes('my personal note'),false);
+    ui.handleChange({target:{id:'mentor-share-notes',checked:true}});
+    assert.match(html,/my personal note/);
+    ui.handleAction('mentor-clear-chat',{});
+    assert.match(html,/اسألني عن مراجعات اليوم/);
+  }finally{globalThis.document=prevDoc;}
+});

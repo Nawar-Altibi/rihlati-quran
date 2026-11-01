@@ -291,3 +291,15 @@ body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{backgroun
 body.dark .mentor-facts span,body.dark .mentor-message-user,body.dark .mentor-step{background:#204839;color:#d4eadd}
 @media(max-width:1180px){.mentor-grid{grid-template-columns:1fr}.mentor-conversation{height:260px}}
 @media(max-width:650px){.mentor-grid .simple-panel{padding:16px}.mentor-task{grid-template-columns:28px 1fr}.mentor-task button{grid-column:2;justify-self:start}.mentor-plan-title{align-items:flex-start;flex-direction:column;gap:2px}.mentor-composer button{min-width:64px}.mentor-conversation{height:290px}}
+
+
+/* Advanced mentoring: explicit personal-data consent + private conversation. */
+.mentor-consent-options{display:grid;gap:10px;padding:12px;margin:8px 0;background:var(--surface2);border:1px solid var(--line);border-radius:12px}
+.mentor-consent-options>label{display:flex;gap:9px;align-items:flex-start;font-size:12px;line-height:1.7;cursor:pointer}
+.mentor-consent-options>label input{width:17px;height:17px;margin-top:2px;accent-color:var(--green);flex:none}
+.mentor-consent-options>label input:disabled{opacity:.4}
+.mentor-consent-options>button{justify-self:start;max-width:100%}
+.mentor-clear{margin:9px 0 0;font-size:11px}
+.mentor-data-preview{padding:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);overflow:auto;max-height:220px;max-width:100%;font:11px/1.6 monospace;white-space:pre-wrap;word-break:break-word}
+.mentor-conversation{height:350px}
+@media(max-width:650px){.mentor-conversation{height:310px}.mentor-consent-options{padding:10px}}

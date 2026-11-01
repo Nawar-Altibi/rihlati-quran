@@ -1,12 +1,15 @@
 import { buildMentorSnapshot, generateMentorPlan, answerMentorLocally, mentorModelPayload, MENTOR_SUGGESTIONS } from './mentor-core.js';
+import { buildDetailedMentorContext, mentorChatHistory } from './mentor-context.js';
 
 const escapeHTML=v=>String(v??'').replace(/[&<>"']/g,x=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const label=t=>escapeHTML(t);
 const modeText=t=>t==='ai'?'إجابة نموذج AI':'من سجلاتك، بدون إرسال بيانات';
 const SESSION_KEY='rihlati-mentor-private-access';
+const CHAT_SESSION_KEY='rihlati-mentor-chat-session-v1';
 
 export function createMentorUI({getData,render,navigate,openSurah,openReview,startQuiz,toast}){
-  let messages=[],busy=false,cloudOptIn=false;
+  let messages=[],busy=false,cloudOptIn=false,shareStudy=false,shareNotes=false,previewData=false;
+  try{const saved=JSON.parse(sessionStorage.getItem(CHAT_SESSION_KEY)||'[]');if(Array.isArray(saved))messages=saved.filter(x=>['user','assistant'].includes(x?.role)&&typeof x?.text==='string').slice(-16);}catch{}
   function sessionKey(){try{return sessionStorage.getItem(SESSION_KEY)||'';}catch{return '';}}
   function saveSessionKey(key){try{sessionStorage.setItem(SESSION_KEY,key);return true;}catch{return false;}}
   function snapshot(){return buildMentorSnapshot(getData());}
@@ -16,7 +19,7 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
       '<article class="mentor-task"><span class="mentor-step">'+(i+1)+'</span><div><strong>'+label(t.title)+'</strong><small>'+label(t.reason)+' · '+t.minutes+' دقيقة</small></div>'+
       (t.surah?'<button class="secondary small-btn" data-action="mentor-open-surah" data-surah="'+t.surah+'">افتح السورة</button>':'')+'</article>'
     ).join(''):'<p class="simple-muted">ما في مراجعات مستحقة مؤكدة. سجّل مراجعاتك لتحصل على اقتراحات أدق.</p>';
-    const conversation=messages.length?messages.slice(-12).map(x=>
+    const conversation=messages.length?messages.slice(-16).map(x=>
       '<div class="mentor-message mentor-message-'+(x.role==='user'?'user':'assistant')+'"><div class="mentor-message-meta">'+
       (x.role==='user'?'سؤالك':'مساعد رحلتي · '+modeText(x.mode))+'</div><p>'+label(x.text)+'</p></div>'
     ).join(''):'<p class="simple-muted">اسألني عن مراجعات اليوم، مواضع أخطائك، التسميع، أو تقدمك. عندي وصول لسجلاتك المحلية للقراءة فقط.</p>';
@@ -28,10 +31,15 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
       '<button class="secondary small-btn" data-action="mentor-quiz">⚡ اختبر حفظك</button></div></section>'+
       '<section class="simple-panel mentor-chat"><div class="mentor-plan-title"><h2>اسأل المساعد</h2><span>يجيب حسب البيانات الفعلية</span></div>'+
       '<div class="mentor-suggestions">'+MENTOR_SUGGESTIONS.map((q,i)=>'<button class="secondary small-btn" type="button" data-action="mentor-suggest" data-index="'+i+'">'+label(q)+'</button>').join('')+'</div>'+
-      '<div id="mentor-messages" class="mentor-conversation" aria-live="polite">'+conversation+'</div>'+
+      '<div id="mentor-messages" class="mentor-conversation" aria-live="polite">'+conversation+'</div>'+(messages.length?'<button type="button" class="secondary small-btn mentor-clear" data-action="mentor-clear-chat">حذف محادثة هذه الجلسة</button>':'')+
       '<form id="mentor-question-form" class="mentor-composer"><label class="mushaf-visually-hidden" for="mentor-question">سؤالك للمساعد</label><input id="mentor-question" name="question" class="input" type="text" maxlength="320" autocomplete="off" placeholder="مثلاً: شو لازم راجع بكرا؟" required'+(busy?' disabled':'')+'><button class="primary" type="submit"'+(busy?' disabled':'')+'>'+(busy?'جارٍ التفكير...':'اسأل')+'</button></form>'+
-      '<div class="mentor-privacy"><label><input type="checkbox" id="mentor-use-cloud"'+(cloudOptIn?' checked':'')+'> استخدم نموذج AI السحابي لهذا السؤال (اختياري)</label>'+
-      '<p>بدون تفعيل الخيار، الإجابات محلية بالكامل. عند تفعيله يُرسَل سؤالك وملخص محدود من إحصائياتك إلى Cloudflare؛ لا تُرسل الملاحظات الخاصة أو كامل سجل الحفظ أو المحادثات. يتطلب ضبط خدمة AI ورمز وصول خاص في Cloudflare.</p>'+
+      '<div class="mentor-privacy"><label><input type="checkbox" id="mentor-use-cloud"'+(cloudOptIn?' checked':'')+'> استخدم المساعد الأقوى GPT-OSS 120B لهذا السؤال (اختياري)</label>'+
+      '<p>بدون تفعيل هذا الخيار، الإجابات محلية بالكامل. عند التفعيل يُرسل السؤال وملخص الإحصاءات ورسائل الحوار السابقة ضمن الجلسة إلى Cloudflare. يتم حفظ الحوار في هذا التبويب فقط، ويمكن حذفه. لا تُرسل الملاحظات الخاصة إلا بموافقة مستقلة أدناه.</p>'+
+      (cloudOptIn?'<div class="mentor-consent-options"><label><input type="checkbox" id="mentor-share-study"'+(shareStudy?' checked':'')+'> اسمح للمساعد بتحليل سجل رحلتي التفصيلي (الحفظ، المراجعات، الاختبارات، التسميع والخطة)</label>'+
+      '<label><input type="checkbox" id="mentor-share-notes"'+(shareNotes?' checked':'')+(shareStudy?'':' disabled')+'> أوافق أيضًا على إرسال ملاحظات الدراسة المكتوبة</label>'+
+      '<button type="button" class="secondary small-btn" data-action="mentor-preview-data">'+(previewData?'إخفاء معاينة البيانات':'اعرض البيانات التي ستُرسل')+'</button>'+
+      (previewData?'<pre class="mentor-data-preview" dir="ltr">'+escapeHTML(JSON.stringify(shareStudy?buildDetailedMentorContext(getData(),{includeNotes:shareNotes}):mentorModelPayload(s,'سؤال تجريبي').context,null,2))+'</pre>':'')+
+      '</div>':'')+
       (cloudOptIn?'<div class="mentor-secret"><label for="mentor-passcode">رمز الوصول الخاص للخدمة (يحفظ مؤقتًا في هذه الجلسة فقط)</label><input id="mentor-passcode" class="input" type="password" autocomplete="off" placeholder="رمز مفعّل من إعدادات Cloudflare" value=""><span>'+(sessionKey()?'يوجد رمز محفوظ لهذه الجلسة':'لم يُدخَل رمز بعد')+'</span></div>':'')+
       '</div></section></div>'+
       '<p class="mentor-disclaimer">المساعد يقدّم اقتراحات تنظيمية فقط، وليس شيخًا أو مصححًا للتجويد أو جهة اعتماد للإجازة. لا يغيّر سجلاتك أو مواعيدك من تلقاء نفسه.</p>';
@@ -39,12 +47,14 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
   function append(role,text,mode='local'){
     messages.push({role,text:String(text).slice(0,2200),mode});
     messages=messages.slice(-16);
+    try{sessionStorage.setItem(CHAT_SESSION_KEY,JSON.stringify(messages));}catch{}
   }
   function send(question){
     const q=String(question||'').trim();
     if(!q||busy)return;
     if(q.length>320){toast('السؤال طويل؛ اكتبه بشكل أقصر.');return;}
     const snap=snapshot(),local=answerMentorLocally(snap,q);
+    const history=mentorChatHistory(messages);
     append('user',q);
     if(!cloudOptIn){
       append('assistant',local,'local');
@@ -57,7 +67,8 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
       render();scrollChat();return;
     }
     busy=true;render();scrollChat();
-    const payload=mentorModelPayload(snap,q);
+    const payload={...mentorModelPayload(snap,q),conversation:history};
+    if(shareStudy)payload.study=buildDetailedMentorContext(getData(),{includeNotes:shareNotes});
     fetch('/api/mentor',{
       method:'POST',headers:{'Content-Type':'application/json','X-Mentor-Token':key},
       body:JSON.stringify(payload),cache:'no-store',credentials:'omit'
@@ -77,6 +88,8 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
       case 'mentor-open-surah':if(Number(target.dataset.surah))openSurah(Number(target.dataset.surah));return true;
       case 'mentor-review':openReview();return true;
       case 'mentor-quiz':startQuiz('random');return true;
+      case 'mentor-preview-data':previewData=!previewData;render();return true;
+      case 'mentor-clear-chat':messages=[];try{sessionStorage.removeItem(CHAT_SESSION_KEY);}catch{}render();return true;
       case 'mentor-suggest':{
         const q=MENTOR_SUGGESTIONS[Number(target.dataset.index)];if(q)send(q);
         return true;
@@ -86,7 +99,16 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
   }
   function handleChange(event){
     if(event.target.id==='mentor-use-cloud'){
-      cloudOptIn=event.target.checked;
+      cloudOptIn=event.target.checked;previewData=false;
+      render();return true;
+    }
+    if(event.target.id==='mentor-share-study'){
+      shareStudy=event.target.checked;
+      if(!shareStudy)shareNotes=false;
+      render();return true;
+    }
+    if(event.target.id==='mentor-share-notes'){
+      shareNotes=shareStudy&&event.target.checked;
       render();return true;
     }
     return false;
