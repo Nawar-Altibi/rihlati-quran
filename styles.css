@@ -218,3 +218,10 @@ body.dark .mushaf-test-panel{background:#204839;border-color:#3d765c}
 body.dark .mushaf-verses.is-test-mode .mushaf-verse{background:#f7f1e6;border-color:#d7cbb3;color:#24382d}
 body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{background:#e1eedd}
 @media(max-width:760px){.mushaf-mode-bar,.mushaf-test-status{flex-direction:column;align-items:stretch}.mushaf-mode-bar span{text-align:right}.mushaf-test-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.mushaf-test-actions button{white-space:normal;padding:9px 6px}.mushaf-test-actions button:nth-child(2){grid-column:span 2;grid-row:1;font-size:15px}.mushaf-verses.is-test-mode .mushaf-verse{font-size:21px}.mushaf-masked-verse{font-size:20px}}
+
+
+/* Keep every test control in a stable slot even when its wording changes. */
+@media(min-width:761px){
+  .mushaf-test-actions{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-items:stretch}
+  .mushaf-test-actions button{min-height:51px;max-width:100%;min-width:0;white-space:normal;line-height:1.5}
+}
