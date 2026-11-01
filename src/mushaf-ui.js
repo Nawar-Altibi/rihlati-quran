@@ -3,8 +3,9 @@
 import { SURAH_NAMES } from './data.js';
 import { normalizeArabicSearch, locateAyah } from './quran-metadata.js';
 import { MUSHAF_PAGE_COUNT, getMushafPageSegments, mushafPageFor, mushafPageVerses, validateMushafChapter, defaultMushafStart } from './mushaf-core.js';
-import { createAyahTest, revealAndAdvanceAyah, moveTestCursor, toggleTestRevealAll, resetAyahTest, isTestAyahVisible, getAyahTestProgress } from './ayah-test.js';
+import { createAyahTest, revealAndAdvanceAyah, moveTestCursor, toggleTestRevealAll, resetAyahTest, toggleQuizMistake, isTestAyahVisible, getAyahTestProgress } from './ayah-test.js';
 
+import { chooseQuizPassage, recordQuizAttempt } from './quiz-core.js';
 const SOURCE='https://quran-json.risanb.com/text/uthmani/chapters/';
 const escapeHTML = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const chapterCache=new Map();
@@ -47,9 +48,10 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     const segments=getMushafPageSegments(page);
     if(segments.some(s=>!chapterCache.has(s.surah))) return '<div class="mushaf-loading" role="status"><span class="mushaf-loading-mark">۞</span><p>جارٍ تحميل آيات الصفحة...</p></div>';
     try {
-      return mushafPageVerses(page,chapterCache).map(group=>{
+      return mushafPageVerses(page,chapterCache).filter(group=>!selfTest?.passage || group.surah===selfTest.passage.surah).map(group=>{
         const title='<div class="mushaf-surah-heading"><span>۞</span><h3>سورة '+escapeHTML(group.name)+'</h3><small>الآيات '+group.fromAyah+'–'+group.toAyah+'</small></div>';
-        const verses=group.verses.map(v=>{
+        const visibleGroup=selfTest?.passage ? group.verses.filter(v=>v.id>=selfTest.passage.startAyah&&v.id<=selfTest.passage.endAyah) : group.verses;
+        const verses=visibleGroup.map(v=>{
           const testing=Boolean(selfTest && selfTest.page===page);
           const currentKey=selfTest?.ayahs[selfTest.currentIndex]?.key;
           const active=testing && currentKey===v.surah+':'+v.ayah;
@@ -72,7 +74,8 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     const surahName=SURAH_NAMES[selectedSurah-1]?.name||start.name;
     const bookmark=getData().settings.mushafBookmark;
     const testProgress=getAyahTestProgress(selfTest);
-    const testControls=selfTest ? '<div class="mushaf-test-panel" aria-label="اختبار الحفظ الذاتي"><div class="mushaf-test-status" aria-live="polite"><b>اختبار الحفظ · الآية '+testProgress.position+' من '+testProgress.total+'</b><span>كشفت '+testProgress.revealed+' آية — اقرأ غيبًا قبل الكشف</span></div><div class="mushaf-test-actions"><button class="secondary" data-action="mushaf-test-prev"'+(testProgress.isFirst?' disabled':'')+'>الآية السابقة</button><button class="primary" data-action="mushaf-test-reveal"'+(isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?' disabled aria-label="هذه الآية مكشوفة بالفعل"':'')+'>اكشف الآية</button><button class="secondary" data-action="mushaf-test-next"'+(testProgress.isLast?' disabled':'')+'>الآية التالية</button><button class="secondary" data-action="mushaf-test-show-all">'+(selfTest.showAll?'إخفاء الكشف الكامل':'عرض جميع الآيات')+'</button><button class="secondary" data-action="mushaf-test-reset">ابدأ من جديد</button></div><small>'+(testProgress.isLast && isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?'أكملت كشف آيات هذه الصفحة. انتقل للصفحة التالية أو سجّل مراجعتك إذا انتهيت.':'اضغط زر «اكشف الآية» أو اضغط Enter على الآية المخفية؛ بتنفتح الآية وبيصير التركيز على التالية تلقائيًا. هذا تدريب ذاتي وليس تقييمًا آليًا.')+'</small></div>' : '';
+    const quizControls=selfTest?.passage ? '<div class="mushaf-quiz-actions"><div><b>مقطع عشوائي · سورة '+escapeHTML(SURAH_NAMES[selfTest.passage.surah-1].name)+'</b><small>الآيات '+selfTest.passage.startAyah+'–'+selfTest.passage.endAyah+' · علّم المواضع التي أخطأت فيها بعد كشفها</small></div><button class="secondary" data-action="mushaf-quiz-mark"'+(!selfTest.lastRevealed?' disabled':'')+'>'+(selfTest.lastRevealed ? ((selfTest.mistakeAyahs||[]).includes(Number(selfTest.lastRevealed.split(':')[1]))?'تراجع عن خطأ الآية '+selfTest.lastRevealed.split(':')[1]:'أخطأت في الآية '+selfTest.lastRevealed.split(':')[1]) : 'اكشف آية أولًا')+'</button><button class="primary" data-action="mushaf-quiz-finish">إنهاء الاختبار وحفظ الأخطاء</button></div>' : '';
+    const testControls=selfTest ? '<div class="mushaf-test-panel" aria-label="اختبار الحفظ الذاتي"><div class="mushaf-test-status" aria-live="polite"><b>اختبار الحفظ · الآية '+testProgress.position+' من '+testProgress.total+'</b><span>كشفت '+testProgress.revealed+' آية — اقرأ غيبًا قبل الكشف</span></div><div class="mushaf-test-actions"><button class="secondary" data-action="mushaf-test-prev"'+(testProgress.isFirst?' disabled':'')+'>الآية السابقة</button><button class="primary" data-action="mushaf-test-reveal"'+(isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?' disabled aria-label="هذه الآية مكشوفة بالفعل"':'')+'>اكشف الآية</button><button class="secondary" data-action="mushaf-test-next"'+(testProgress.isLast?' disabled':'')+'>الآية التالية</button><button class="secondary" data-action="mushaf-test-show-all">'+(selfTest.showAll?'إخفاء الكشف الكامل':'عرض جميع الآيات')+'</button><button class="secondary" data-action="mushaf-test-reset">ابدأ من جديد</button></div><small>'+(testProgress.isLast && isTestAyahVisible(selfTest,testProgress.current.surah,testProgress.current.ayah)?'أكملت كشف آيات هذه الصفحة. انتقل للصفحة التالية أو سجّل مراجعتك إذا انتهيت.':'اضغط زر «اكشف الآية» أو اضغط Enter على الآية المخفية؛ بتنفتح الآية وبيصير التركيز على التالية تلقائيًا. هذا تدريب ذاتي وليس تقييمًا آليًا.')+'</small>'+quizControls+'</div>' : '';
     return '<section class="mushaf-hero"><div><div class="simple-kicker">القرآن الكريم · رواية حفص</div><h1>المصحف</h1><p>اقرأ من حيث توقفت، واختبر حفظك، ثم سجّل المراجعة.</p></div><div class="mushaf-hero-symbol" aria-hidden="true">۞</div></section>'+
       '<section class="mushaf-toolbar" aria-label="أدوات التنقل بالمصحف">' +
       '<label class="mushaf-search"><span>ابحث عن السورة</span><input id="mushaf-surah-search" type="search" class="input" placeholder="اسم السورة أو رقمها" autocomplete="off"></label>'+
@@ -89,6 +92,7 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
       '<div class="mushaf-page-foot"><span>مصحف المدينة ٦٠٤ صفحات · ترتيب آيات حفص</span><span>'+new Intl.NumberFormat('ar').format(page)+'</span></div></div>'+
       '<div class="mushaf-bottom-controls"><button class="secondary" data-action="mushaf-prev"'+(page===1?' disabled':'')+'>السابق</button><button class="secondary" data-action="mushaf-next"'+(page===604?' disabled':'')+'>التالي</button></div></div>'+
       '<aside class="mushaf-side"><div class="mushaf-side-card"><div class="simple-kicker">موضعك الحالي</div><h2>سورة '+escapeHTML(surahName)+'</h2><p>الآية '+new Intl.NumberFormat('ar').format(selectedAyah)+' · صفحة '+new Intl.NumberFormat('ar').format(page)+'</p>'+
+      '<div class="mushaf-quiz-launch"><b>اختبر حفظك</b><p>مقاطع من السور التي سجّلت حفظها أو مراجعتها، وليس من الأجزاء المسجلة بشكل عام.</p><button class="secondary" data-action="mushaf-quiz-random">اختبار عشوائي</button><button class="secondary" data-action="mushaf-quiz-weak">مواضع تحتاج تثبيت</button><button class="secondary" data-action="mushaf-quiz-due">مراجعات مستحقة</button></div>'+
       '<button class="primary mushaf-review-button" data-action="mushaf-record-review">✓ أنهيت المراجعة — سجّلها</button>'+
       '<button class="secondary mushaf-bookmark-button" data-action="mushaf-save-bookmark">حفظ علامة عند هذه الآية</button>'+
       (bookmark?'<button class="secondary mushaf-bookmark-button" data-action="mushaf-go-bookmark">العودة للعلامة المحفوظة</button>':'')+
@@ -128,12 +132,45 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     active.scrollIntoView({behavior:'smooth',block:'nearest'});
   }
 
+  function startRandomQuiz(mode='random') {
+    const passage=chooseQuizPassage(getData(),{mode});
+    if(!passage){
+      toast(mode==='weak'?'مافي أخطاء آيات أو تقييمات ضعيفة مسجلة بعد.':'مافي مقاطع موثّقة لهذا النوع من الاختبارات. سجّل مراجعة سورة أو حفظ آيات فعلًا أولًا.');
+      return false;
+    }
+    page=passage.page;selfTest=createAyahTest(page,passage);
+    const first=selfTest.ayahs[0];
+    selectedSurah=first.surah;selectedAyah=first.ayah;
+    error='';commitReading();navigate('mushaf');
+    if(document.querySelector('#mushaf-page-body .mushaf-verse.is-testing-current'))focusActiveTestAyah();
+    return true;
+  }
+
   function handleAction(action,target) {
     switch(action) {
       case 'mushaf-prev':setPage(page-1);return true;
       case 'mushaf-next':setPage(page+1);return true;
       case 'mushaf-go-page':setPage(Number(document.querySelector('#mushaf-page-number')?.value));return true;
       case 'mushaf-go-ayah':goToSurah(Number(document.querySelector('#mushaf-surah-select')?.value),Number(document.querySelector('#mushaf-ayah-jump')?.value));return true;
+      case 'mushaf-quiz-random':startRandomQuiz('random');return true;
+      case 'mushaf-quiz-weak':startRandomQuiz('weak');return true;
+      case 'mushaf-quiz-due':startRandomQuiz('due');return true;
+      case 'mushaf-quiz-mark':
+        if(selfTest?.passage){selfTest=toggleQuizMistake(selfTest);render();focusActiveTestAyah();}
+        return true;
+      case 'mushaf-quiz-finish':
+        if(selfTest?.passage){
+          if(selfTest.revealed.length<selfTest.ayahs.length){
+            toast('اكشف آيات المقطع واحدة واحدة قبل حفظ نتيجة الاختبار.');
+          }else{
+            const result=recordQuizAttempt(getData(),selfTest.passage,selfTest.mistakeAyahs||[]);
+            if(persist()){
+              selfTest=null;render();
+              toast('حُفظ الاختبار. مواضع تحتاج تثبيت: '+result.mistakeAyahs.length+' — ستكون لها أولوية في الاختبارات المقبلة.');
+            }
+          }
+        }
+        return true;
       case 'mushaf-toggle-test':selfTest=selfTest?null:createAyahTest(page);render();return true;
       case 'mushaf-test-reveal':
         if(selfTest){
@@ -236,5 +273,5 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     else goToSurah(Number(document.querySelector('#mushaf-surah-select')?.value),Number(e.target.value));
     return true;
   }
-  return {view,afterRender,handleAction,handleChange,handleInput,handleKeydown,goToSurah,open:()=>navigate('mushaf'),getPage:()=>page};
+  return {view,afterRender,handleAction,handleChange,handleInput,handleKeydown,goToSurah,startRandomQuiz,open:()=>navigate('mushaf'),getPage:()=>page};
 }
