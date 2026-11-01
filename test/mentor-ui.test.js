@@ -11,7 +11,7 @@ test('mentor renders current phase and safe local plan on empty seeded history',
   assert.match(html,/ورد اليوم المقترح/);
   assert.match(html,/تثبيت جزء عمّ/);
   assert.match(html,/شو لازم راجع اليوم؟/);
-  assert.match(html,/بدون إرسال بيانات/);
+  assert.match(html,/الإجابات محلية بالكامل/);
   assert.ok(!html.includes('انتهيت من حفظ جزء عم'));
 });
 test('suggestions generate a local reply without mutating memorization records',()=>{
