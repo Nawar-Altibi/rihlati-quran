@@ -243,3 +243,8 @@ body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{backgroun
 .simple-quiz-summary p{margin:0}
 @media(max-width:1050px){.mushaf-quiz-actions{grid-template-columns:1fr 1fr}.mushaf-quiz-actions>div{grid-column:span 2}}
 @media(max-width:580px){.mushaf-quiz-actions{grid-template-columns:1fr}.mushaf-quiz-actions>div{grid-column:span 1}.mushaf-quiz-actions button{width:100%}}
+
+
+.simple-weak-list{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin-top:9px;border-top:1px solid var(--line);padding-top:11px}
+.simple-weak-list>b{display:block;width:100%;font-size:13px;color:var(--green)}
+.simple-weak-list span{font-size:12px;padding:6px 9px;border:1px solid var(--line);background:var(--surface2);border-radius:9px}
