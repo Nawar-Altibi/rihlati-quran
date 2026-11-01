@@ -13,7 +13,7 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
   function view(){
     const s=snapshot(),plan=generateMentorPlan(s);
     const cards=plan.length?plan.map((t,i)=>
-      '<article class="mentor-task"><span class="mentor-step">'+(i+1)+'</span><div><strong>'+label(t.title)+'</strong><small>'+label(t.reason)+'</small></div>'+
+      '<article class="mentor-task"><span class="mentor-step">'+(i+1)+'</span><div><strong>'+label(t.title)+'</strong><small>'+label(t.reason)+' · '+t.minutes+' دقيقة</small></div>'+
       (t.surah?'<button class="secondary small-btn" data-action="mentor-open-surah" data-surah="'+t.surah+'">افتح السورة</button>':'')+'</article>'
     ).join(''):'<p class="simple-muted">ما في مراجعات مستحقة مؤكدة. سجّل مراجعاتك لتحصل على اقتراحات أدق.</p>';
     const conversation=messages.length?messages.slice(-12).map(x=>
