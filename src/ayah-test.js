@@ -13,10 +13,12 @@ export function ayahsOnMushafPage(page) {
     }))
   );
 }
-export function createAyahTest(page) {
-  const ayahs=ayahsOnMushafPage(page);
-  if (!ayahs.length) throw new Error('لا توجد آيات لهذه الصفحة.');
-  return {page, ayahs, currentIndex:0, revealed:[], showAll:false};
+export function createAyahTest(page, passage=null) {
+  const all=ayahsOnMushafPage(page);
+  const ayahs=passage ? all.filter(v=>v.surah===Number(passage.surah)&&v.ayah>=Number(passage.startAyah)&&v.ayah<=Number(passage.endAyah)) : all;
+  if (!ayahs.length || (passage && (ayahs.length!==Number(passage.endAyah)-Number(passage.startAyah)+1 || Number(passage.page)!==page)))
+    throw new Error('نطاق الاختبار لا ينتمي لهذه الصفحة.');
+  return {page, ayahs, currentIndex:0, revealed:[], showAll:false, passage, lastRevealed:null, mistakeAyahs:[]};
 }
 export function revealCurrentAyah(state) {
   if (!state) throw new Error('لم يبدأ الاختبار.');
@@ -32,9 +34,10 @@ export function revealCurrentAyah(state) {
  */
 export function revealAndAdvanceAyah(state) {
   const revealed=revealCurrentAyah(state);
+  const lastRevealed=revealed.ayahs[revealed.currentIndex]?.key||null;
   return revealed.currentIndex < revealed.ayahs.length-1
-    ? {...revealed,currentIndex:revealed.currentIndex+1}
-    : revealed;
+    ? {...revealed,currentIndex:revealed.currentIndex+1,lastRevealed}
+    : {...revealed,lastRevealed};
 }
 
 export function moveTestCursor(state, amount) {
@@ -47,8 +50,16 @@ export function toggleTestRevealAll(state) {
   return {...state,showAll:!state.showAll};
 }
 export function resetAyahTest(state, page=state?.page) {
-  return createAyahTest(page);
+  return createAyahTest(page,page===state?.page?state?.passage:null);
 }
+export function toggleQuizMistake(state) {
+  if(!state?.passage || !state.lastRevealed)return state;
+  const ayah=Number(state.lastRevealed.split(':')[1]);
+  const mistakes=state.mistakeAyahs||[];
+  const mistakeAyahs=mistakes.includes(ayah) ? mistakes.filter(n=>n!==ayah) : [...mistakes,ayah].sort((a,b)=>a-b);
+  return {...state,mistakeAyahs};
+}
+
 export function isTestAyahVisible(state, surah, ayah) {
   return Boolean(state && (state.showAll || state.revealed.includes(keyOf(surah,ayah))));
 }
