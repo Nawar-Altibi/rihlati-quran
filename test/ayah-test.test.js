@@ -57,6 +57,20 @@ test('next and previous cannot leave the available page, all-show is reversible'
   assert.equal(isTestAyahVisible(hidden,114,6),false);
 });
 
+test('show-all reveals every ayah but reverting only preserves explicitly revealed ayahs', () => {
+  const before=revealCurrentAyah(createAyahTest(582));
+  const shown=toggleTestRevealAll(before);
+  assert.equal(shown.currentIndex,0);
+  assert.equal(shown.showAll,true);
+  for(const ayah of shown.ayahs) assert.equal(isTestAyahVisible(shown,ayah.surah,ayah.ayah),true);
+  const returned=toggleTestRevealAll(shown);
+  assert.equal(returned.showAll,false);
+  assert.equal(returned.currentIndex,0);
+  assert.equal(returned.revealed.length,1);
+  assert.equal(isTestAyahVisible(returned,78,1),true);
+  assert.equal(isTestAyahVisible(returned,78,2),false);
+});
+
 test('reset hides verses again, moving to another page resets separately', () => {
   const s=revealCurrentAyah(createAyahTest(585));
   assert.equal(isTestAyahVisible(s,80,1),true);
