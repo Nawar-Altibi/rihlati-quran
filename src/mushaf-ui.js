@@ -119,6 +119,15 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
       if(n===loadForPage && document.querySelector('#mushaf-page-body')) {error=e?.message||'تحقق من اتصال الإنترنت.';render();}
     });
   }
+  // Restore keyboard focus after rendering replaces the verse buttons.
+  // This lets a reader keep pressing Enter without returning to the mouse.
+  function focusActiveTestAyah() {
+    const active=document.querySelector('#mushaf-page-body .mushaf-verse.is-testing-current');
+    if(!active)return;
+    active.focus({preventScroll:true});
+    active.scrollIntoView({behavior:'smooth',block:'nearest'});
+  }
+
   function handleAction(action,target) {
     switch(action) {
       case 'mushaf-prev':setPage(page-1);return true;
@@ -132,8 +141,7 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
           const current=selfTest.ayahs[selfTest.currentIndex];
           selectedSurah=current.surah;selectedAyah=current.ayah;
           commitReading();render();
-          const active=document.querySelector('.mushaf-verse.is-testing-current');
-          active?.scrollIntoView({behavior:'smooth',block:'nearest'});
+          focusActiveTestAyah();
         }
         return true;
       case 'mushaf-test-prev':
@@ -141,21 +149,21 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
         if(selfTest){
           selfTest=moveTestCursor(selfTest,action==='mushaf-test-next'?1:-1);
           const current=selfTest.ayahs[selfTest.currentIndex];
-          selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();
+          selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();focusActiveTestAyah();
         }
         return true;
       case 'mushaf-test-show-all':
         if(selfTest){selfTest=toggleTestRevealAll(selfTest);render();}
         return true;
       case 'mushaf-test-reset':
-        if(selfTest){selfTest=resetAyahTest(selfTest);const current=selfTest.ayahs[0];selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();}
+        if(selfTest){selfTest=resetAyahTest(selfTest);const current=selfTest.ayahs[0];selectedSurah=current.surah;selectedAyah=current.ayah;commitReading();render();focusActiveTestAyah();}
         return true;
       case 'mushaf-select-ayah':{
         const s=Number(target.dataset.surah), a=Number(target.dataset.ayah);
         if(selfTest){
           const index=selfTest.ayahs.findIndex(v=>v.surah===s&&v.ayah===a);
           if(index!==-1)selfTest={...selfTest,currentIndex:index,showAll:false};
-          selectedSurah=s;selectedAyah=a;commitReading();render();return true;
+          selectedSurah=s;selectedAyah=a;commitReading();render();focusActiveTestAyah();return true;
         }
         selectedSurah=s;selectedAyah=a;commitReading();
         document.querySelectorAll('.mushaf-verse.selected').forEach(v=>v.classList.remove('selected'));
@@ -197,7 +205,27 @@ export function createMushafUI({getData,persist,toast,render,navigate,openReview
     return true;
   }
   function handleKeydown(e){
-    if(e.key!=='Enter'||!['mushaf-page-number','mushaf-ayah-jump'].includes(e.target.id))return false;
+    if(e.key!=='Enter' || e.repeat)return false;
+
+    // When an unrevealed Quran Ayah has keyboard focus, Enter behaves exactly
+    // like pressing "اكشف الآية". Stop the button's synthesized click so the
+    // next Ayah is not accidentally selected or skipped a second time.
+    const verse=e.target.closest?.('#mushaf-page-body .mushaf-verse[data-action="mushaf-select-ayah"]');
+    if(selfTest && verse){
+      const surah=Number(verse.dataset.surah),ayah=Number(verse.dataset.ayah);
+      const index=selfTest.ayahs.findIndex(v=>v.surah===surah&&v.ayah===ayah);
+      if(index>=0 && !isTestAyahVisible(selfTest,surah,ayah)){
+        e.preventDefault();
+        selfTest={...selfTest,currentIndex:index,showAll:false};
+        handleAction('mushaf-test-reveal',verse);
+        return true;
+      }
+      // Already-revealed verses retain their normal button keyboard behavior.
+      return false;
+    }
+
+    // Existing Enter shortcuts for page and Ayah number fields still work.
+    if(!['mushaf-page-number','mushaf-ayah-jump'].includes(e.target.id))return false;
     e.preventDefault();
     if(e.target.id==='mushaf-page-number')setPage(Number(e.target.value));
     else goToSurah(Number(document.querySelector('#mushaf-surah-select')?.value),Number(e.target.value));
