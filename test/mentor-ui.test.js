@@ -70,7 +70,7 @@ test('deep-study consent is granular and local chat remains user-controlled',()=
     assert.match(html,/disabled/);
     ui.handleChange({target:{id:'mentor-share-study',checked:true}});
     ui.handleAction('mentor-preview-data',{});
-    assert.match(html,/"activities"/);
+    assert.match(html,/&quot;activities&quot;/);
     assert.equal(html.includes('my personal note'),false);
     ui.handleChange({target:{id:'mentor-share-notes',checked:true}});
     assert.match(html,/my personal note/);
