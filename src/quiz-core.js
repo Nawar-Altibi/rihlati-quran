@@ -100,7 +100,7 @@ export function chooseQuizPassage(data,{mode='random',date=todayKey(),rng=Math.r
   const n=Math.min(Math.max(1,Math.floor(length)),span.endAyah-span.startAyah+1);
   const maxStart=span.endAyah-n+1;
   let start=span.startAyah+randomIndex(maxStart-span.startAyah+1,rng);
-  if(mode==='weak'&&span.mistakeAyahs.length){
+  if(span.mistakeAyahs.length && (mode==='weak' || (mode==='random' && clampRandom(rng())<0.65))){
     const error=span.mistakeAyahs[randomIndex(span.mistakeAyahs.length,rng)];
     start=Math.min(maxStart,Math.max(span.startAyah,error-Math.floor((n-1)/2)));
   }
