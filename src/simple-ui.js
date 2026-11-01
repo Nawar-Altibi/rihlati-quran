@@ -1,5 +1,8 @@
 import { SIMPLE_STAGES, getCurrentStage, getSurahUnit, surahName, dueSurahReviews, recordDailyReviews, createGroupRecitation, completeGroupRecitation, advanceSimpleStage, surahNumbers } from './simple-flow.js';
 import { todayKey, addDays } from './logic.js';
+import { SURAH_NAMES } from './data.js';
+import { normalizeArabicSearch } from './quran-metadata.js';
+import { createMemorizeUI } from './memorize-ui.js';
 
 const esc = text => String(text ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const fmt = day => day ? new Intl.DateTimeFormat('ar', { day:'numeric', month:'short' }).format(new Date(day + 'T12:00:00')) : 'غير محدد';
@@ -9,6 +12,7 @@ const btn = (action, label, klass = 'primary', id = '') => '<button class="' + k
 
 export function createSimpleUI({ getData, persist, toast, openModal, navigate, render, openMemorizeModal }) {
   const d = () => getData();
+  const memo = createMemorizeUI({getData,persist,toast,openModal,render});
   const savedReview = n => d().activities.some(a => a.type === 'revision' && a.date === todayKey() && d().units.some(u => u.id === a.unitId && Number(u.surah) === n));
 
   function currentSurahRows(stage = getCurrentStage(d())) {
@@ -90,7 +94,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     switch(action) {
       case 'simple-review-open': openReview(); return true;
       case 'simple-review-one': openReview([Number(id)]); return true;
-      case 'simple-memorize': openMemorizeModal(); return true;
+      case 'simple-memorize': memo.open(); return true;
       case 'simple-teacher-schedule': openGroupPlan(); return true;
       case 'simple-teacher-now': openGroupPlan(true); return true;
       case 'simple-teacher-complete': openGroupDone(id); return true;
@@ -104,6 +108,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   }
 
   function submit(form, fd) {
+    if (memo.submit(fd)) return true;
     if(fd.has('simpleDailyReview')) {
       const nums = fd.getAll('surahs').map(Number), ratings={}, notes={};
       for (const n of nums) { ratings[n]=String(fd.get('rating-'+n)||''); notes[n]=String(fd.get('notes')||''); }
@@ -142,6 +147,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   }
 
   function modalInput(e) {
+    if (memo.onInput(e)) return;
     if(e.target.id === 'simple-surah-search') {
       const q = e.target.value.trim().replace(/[أإآ]/g,'ا').replace(/ى/g,'ي');
       document.querySelectorAll('.simple-picker-row').forEach(row => {row.hidden = !row.dataset.searchName.replace(/[أإآ]/g,'ا').replace(/ى/g,'ي').includes(q);});
