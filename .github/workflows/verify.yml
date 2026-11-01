@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, feature/simple-daily-quran-flow, feature/embedded-mushaf-reader, feature/ayah-memorization-self-test, feature/enter-reveal-ayah]
+    branches: [main, feature/simple-daily-quran-flow, feature/embedded-mushaf-reader, feature/ayah-memorization-self-test, feature/enter-reveal-ayah, feature/smart-random-memorization-quiz]
   pull_request:
     branches: [main]
 jobs:
@@ -20,6 +20,7 @@ jobs:
           node --check src/mushaf-core.js
           node --check src/mushaf-ui.js
           node --check src/ayah-test.js
+          node --check src/quiz-core.js
       - name: Run tests
         run: npm test
       - name: Validate Cloudflare Pages build
