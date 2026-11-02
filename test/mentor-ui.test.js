@@ -22,6 +22,7 @@ test('suggestions generate a local reply without mutating memorization records',
   const render=()=>{html=ui.view()};
   ui=createMentorUI({getData:()=>d,render,navigate:()=>{},openSurah:()=>{},openReview:()=>{},startQuiz:()=>{},toast:()=>{}});
   try {
+    assert.equal(ui.handleChange({target:{id:'mentor-use-cloud',checked:false}}),true);
     assert.equal(ui.handleAction('mentor-suggest',{dataset:{index:'0'}}),true);
     assert.match(html,/اقتراحي لوردك اليوم/);
     assert.match(html,/مساعد رحلتي · المساعد المحلي/);
