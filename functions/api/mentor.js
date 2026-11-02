@@ -74,7 +74,19 @@ export function findUnsupportedStudyClaims(answer,question,evidence){
       'سورة '+name,'راجع '+name,'راجع سورة '+name,'مراجعة '+name,
       'احفظ '+name,'احفظ سورة '+name,'ثبّت '+name,'تثبيت '+name,'ثم '+name
     ];
-    if(patterns.some(phrase=>answer.includes(phrase)))unsupported.push(name);
+    const mentions=phrase=>{
+      let offset=0;
+      while((offset=answer.indexOf(phrase,offset))!==-1){
+        const before=offset?answer[offset-1]:'';
+        const after=answer[offset+phrase.length]||'';
+        const atWordStart=!before || !/[\\p{L}\\p{N}]/u.test(before);
+        const atWordEnd=!after || !/[\\p{L}\\p{N}]/u.test(after);
+        if(atWordStart&&atWordEnd)return true;
+        offset+=phrase.length;
+      }
+      return false;
+    };
+    if(patterns.some(mentions))unsupported.push(name);
   }
   if(/(?:راجع|مراجعة|حفظ|احفظ)\s+(?:ال)?(?:جزء\s*29|جزء\s*30|الجزء\s+ال(?:عمّ|ثاني)|جزء\s+عمّ|جزء\s+تبارك)/u.test(answer))
     unsupported.push('مراجعة جزء كامل دون سجل مؤكد');
