@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { onRequestPost,sanitizeMentorRequest,sanitizeStudyContext,onRequestGet } from '../functions/api/mentor.js';
+import { onRequestPost,sanitizeMentorRequest,sanitizeStudyContext,onRequestGet,findUnsupportedStudyClaims,sanitizePlanEvidence } from '../functions/api/mentor.js';
 
 const secret='private-mentor-access-test-0000123456789';
 const base='https://example.pages.dev/api/mentor';
 const payload={question:'شو راجع اليوم؟',context:{date:'2026-11-01',stage:'تثبيت جزء عمّ',
   trackedSurahs:1,reviewsLast7:2,quizAttempts:1,
   due:[{name:'عبس',date:'2026-11-01',rating:'ضعيف'}],
-  weakSurahs:[],weakAyahs:[{name:'عبس',ayah:5,count:1}],privateNote:'do not leak'}};
+  weakSurahs:[],weakAyahs:[{name:'عبس',ayah:5,count:1}],evidence:{verifiedSurahs:['عبس'],supportedPlan:[{type:'review',surah:'عبس',title:'راجع عبس',minutes:30}],noConfirmedAssignments:false},privateNote:'do not leak'}};
 const request=(data=payload,token=secret,origin='https://example.pages.dev')=>new Request(base,{
   method:'POST',headers:{'Content-Type':'application/json','Origin':origin,'X-Mentor-Token':token},body:JSON.stringify(data)
 });
@@ -120,4 +120,18 @@ test('true model turn receives whitelisted study data and role-safe conversation
   assert.equal(prompts[3].role,'assistant');
   assert.equal(prompts.at(-1).content,payload.question);
   assert.equal(JSON.stringify(prompts).includes('private'),false);
+});
+
+test('AI study claim validator rejects unsupported new Surahs and whole-Juz invented reviews',()=>{
+  const facts=sanitizePlanEvidence({verifiedSurahs:['عبس'],supportedPlan:[{type:'review',surah:'عبس',title:'مراجعة عبس',minutes:15}]});
+  assert.deepEqual(findUnsupportedStudyClaims('راجع سورة القصص ثم الملك','شو راجع اليوم؟',facts),['القصص','الملك']);
+  assert.deepEqual(findUnsupportedStudyClaims('راجع سورة عبس 1–5','شو راجع اليوم؟',facts),[]);
+  assert.ok(findUnsupportedStudyClaims('راجع جزء 29 كامل','شو راجع اليوم؟',facts).length>0);
+});
+test('server rejects AI claim of unrecorded memorized Surah, before returning advice',async()=>{
+  const env={MENTOR_QUOTA_DB:mockQuota(),MENTOR_ACCESS_TOKEN:secret,
+    AI:{run:async()=>({choices:[{message:{content:'راجع سورة القصص (1-5) اليوم.'}}]})}};
+  const r=await onRequestPost({request:request(),env});
+  assert.equal(r.status,422);
+  assert.equal((await r.json()).code,'UNSUPPORTED_STUDY_CLAIM');
 });
