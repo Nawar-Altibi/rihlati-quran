@@ -36,7 +36,7 @@ export function formatMentorAnswer(input) {
     const h=line.match(heading);
     if(h) {
       flushText();flushGroup();
-      const level=Math.min(4,h[1].length+2);
+      const level=Math.min(5,h[1].length+1);
       out.push('<h'+level+'>'+inlineFormat(h[2])+'</h'+level+'>');
       continue;
     }
