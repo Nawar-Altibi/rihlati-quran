@@ -79,8 +79,8 @@ export function findUnsupportedStudyClaims(answer,question,evidence){
       while((offset=answer.indexOf(phrase,offset))!==-1){
         const before=offset?answer[offset-1]:'';
         const after=answer[offset+phrase.length]||'';
-        const atWordStart=!before || !/[\\p{L}\\p{N}]/u.test(before);
-        const atWordEnd=!after || !/[\\p{L}\\p{N}]/u.test(after);
+        const atWordStart=!before || !/[\p{L}\p{N}]/u.test(before);
+        const atWordEnd=!after || !/[\p{L}\p{N}]/u.test(after);
         if(atWordStart&&atWordEnd)return true;
         offset+=phrase.length;
       }
