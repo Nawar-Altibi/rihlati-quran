@@ -17,7 +17,10 @@ export function buildMentorSnapshot(data,date=todayKey()){
   const stage=getCurrentStage(data);
   const units=(data.units||[]).filter(u=>validSurah(u.surah) && ['surah','ayah'].includes(u.method));
   const activityUnitIds=new Set((data.activities||[]).filter(a=>a.type==='revision'&&a.completed).map(a=>a.unitId));
-  const recorded=units.filter(u=>!u.simpleTrack||activityUnitIds.has(u.id));
+  // A selected stage or drafted Surah is not proof of memorization.
+  // A simpleTrack Surah requires an actual completed revision to be eligible.
+  const unconfirmed=new Set(['قيد الحفظ','لم أبدأ','مخطط','planned','لم يبدأ']);
+  const recorded=units.filter(u=>!unconfirmed.has(u.status)&&(!u.simpleTrack||activityUnitIds.has(u.id)));
   const recordedSurahs=unique(recorded.map(u=>Number(u.surah)));
   const reviewHistory=(data.activities||[]).filter(a=>a.type==='revision'&&a.completed);
   const reviewsLast7=reviewHistory.filter(a=>a.date>=addDays(date,-6)&&a.date<=date);
@@ -50,35 +53,58 @@ export function buildMentorSnapshot(data,date=todayKey()){
     reviewsLast7:reviewsLast7.length,due:due.slice(0,12),
     weakSurahs:weakSurahs.slice(0,8),weakAyahs,
     quizAttempts:quizzes.attempts,nextSession,recentTeacherSessions,
+    verifiedSurahs:recordedSurahs.slice(0,114).map(n=>({surah:n,name:surahName(n),source:'سجل حفظ أو مراجعة صريح'})),
     note:'هذه المعلومات مبنية فقط على التسجيلات الفعلية، ولا تعني أن كل سورة مسجلة متقنة.'
   };
 }
 
 export function generateMentorPlan(snapshot) {
-  const tasks=[],ids=new Set();
+  // The visible daily plan is deterministic and evidence-gated. The AI may
+  // explain or rearrange these items, not fabricate unrelated memorized Surahs.
+  const tasks=[],ids=new Set(),eligible=new Set(snapshot.verifiedSurahs?.map(x=>x.surah)||snapshot.trackedSurahNumbers||[]);
   const push=(type,surah,title,reason)=>{
+    if(surah && !eligible.has(Number(surah)))return;
     const key=type+':'+surah;
     if(ids.has(key))return;
     ids.add(key);tasks.push({type,surah,title,reason});
   };
-  const weakPriority=snapshot.weakAyahs.slice(0,2);
-  for(const x of weakPriority)push('weak',x.surah,'ثبّت سورة '+x.name+' — الآية '+x.ayah,'سجّلت خطأً في هذا الموضع '+x.count+' مرة');
-  for(const x of snapshot.due.slice(0,3))push('review',x.surah,'راجع سورة '+x.name,x.rating?'مستحقة ومصنفة: '+x.rating:'مراجعتها مستحقة الآن');
-  if(tasks.length<3){
-    for(const x of snapshot.weakSurahs.slice(0,2))push('review',x.surah,'راجع سورة '+x.name,'تقييم سابق بحاجة تثبيت');
-  }
-  if(tasks.length<3 && snapshot.unreviewedStageSurahs.length) {
-    const n=snapshot.unreviewedStageSurahs[0];
-    push('suggest',n,'ابدأ بتثبيت سورة '+surahName(n),'اقتراح من المرحلة الحالية، وليس إثباتًا أنها محفوظة');
-  }
+  for(const x of snapshot.weakAyahs.slice(0,2))
+    push('weak',x.surah,'ثبّت سورة '+x.name+' — الآية '+x.ayah,'خطأ مسجّل في اختبار ذاتي ('+x.count+' مرة)');
+  for(const x of snapshot.due.slice(0,3))
+    push('review',x.surah,'راجع سورة '+x.name,x.rating?'مراجعة مستحقة · آخر تقييم '+x.rating:'مراجعة مستحقة بتاريخ '+x.date);
+  if(tasks.length<3)for(const x of snapshot.weakSurahs.slice(0,2))
+    push('review',x.surah,'راجع سورة '+x.name,'مراجعة مع تصنيف يحتاج تثبيت');
   if(snapshot.nextSession){
     const names=snapshot.nextSession.surahs.slice(0,3).map(surahName).join('، ');
-    tasks.push({type:'session',surah:snapshot.nextSession.surahs[0]||null,
-      title:'استعد للتسميع'+(names?' — '+names:''),reason:'الموعد المسجل: '+snapshot.nextSession.date});
+    tasks.push({type:'session',surah:null,
+      title:'استعد لموعد التسميع'+(names?' — '+names:''),
+      reason:'الموعد المسجّل: '+snapshot.nextSession.date+'؛ تأكّد من السور مع معلّمك'});
   }
-  const selected=tasks.slice(0,4),weights=tasks.slice(0,4).map((_,i)=>[4,3,2,1][i]);
+  if(!tasks.length)tasks.push({
+    type:'verify',surah:null,title:'حدّد محفوظك الفعلي أولًا',
+    reason:'لا توجد مراجعات مستحقة أو آيات ضعيفة موثّقة؛ سجل سورة أو مقطعًا راجعته فعلًا. اختيار المرحلة ليس إثباتًا للحفظ.'
+  });
+  const selected=tasks.slice(0,4),weights=selected.map((_,i)=>[4,3,2,1][i]);
   const total=weights.reduce((sum,x)=>sum+x,0)||1;
-  return selected.map((task,i)=>({...task,minutes:Math.max(3,Math.round(snapshot.dailyMinutes*weights[i]/total))}));
+  const daily=Math.max(10,Math.min(120,Number(snapshot.dailyMinutes)||30));
+  let remaining=daily;
+  return selected.map((task,i)=>{
+    const minutes=i===selected.length-1?remaining:Math.min(remaining,Math.max(1,Math.floor(daily*weights[i]/total)));
+    remaining-=minutes;
+    return {...task,minutes};
+  });
+}
+
+export function buildMentorEvidence(snapshot){
+  const plan=generateMentorPlan(snapshot);
+  return {
+    date:snapshot.date,dailyMinutes:snapshot.dailyMinutes,
+    stageLabelOnly:snapshot.stage.title,
+    warning:'اختيار جزء عمّ أو تبارك في الخطة لا يثبت حفظ كل سوره. ممنوع اقتراح مراجعة جزء كامل أو حفظ جديد باعتبارهما مطلوبين دون دليل.',
+    verifiedSurahs:(snapshot.verifiedSurahs||[]).map(x=>x.name),
+    supportedPlan:plan.map(t=>({type:t.type,surah:t.surah?surahName(t.surah):null,title:t.title,reason:t.reason,minutes:t.minutes})),
+    noConfirmedAssignments:plan.every(t=>t.type==='verify')
+  };
 }
 
 export function answerMentorLocally(snapshot,question){
@@ -101,7 +127,7 @@ export function answerMentorLocally(snapshot,question){
       (snapshot.stage.newMemorization?'إذا أنهيت مراجعاتك، سجّل مقطع الحفظ الجديد فقط بعد ما تحفظه فعلًا. ':'هالمرحلة مخصصة لتثبيت المحفوظ السابق، مو لإضافة حفظ جديد إجباري. ')+
       (suggested?'سورة مقترحة للبدء: '+surahName(suggested)+'.':'');
   }
-  if(plan.length)return 'اقتراحي لوردك اليوم: '+plan.slice(0,3).map((t,i)=>(i+1)+') '+t.title+' ('+t.minutes+' دقيقة) — '+t.reason).join('؛ ')+'. سجّل فقط اللي أنجزته فعلًا.';
+  if(plan.length)return 'اقتراحي لوردك اليوم: '+plan.slice(0,3).map((t,i)=>(i+1)+') '+t.title+' ('+t.minutes+' دقيقة) — '+t.reason).join('؛ ')+'. لا تعتبر أجزاء المرحلة كاملة محفوظة من غير تسجيل صريح.';
   return 'اليوم ما في مراجعات مستحقة موثقة. سجّل السور اللي حافظها أو راجعتها فعلًا، حتى أقدر أعمل لك وردًا أدق. ما رح أفترض إتقان أي جزء من السجلات العامة.';
 }
 
@@ -113,6 +139,7 @@ export function mentorModelPayload(snapshot,question){
     question:prompt,
     context:{
       date:snapshot.date,stage:snapshot.stage.title,dailyMinutes:snapshot.dailyMinutes,
+      evidence:buildMentorEvidence(snapshot),
       trackedSurahs:snapshot.trackedSurahs,reviewsLast7:snapshot.reviewsLast7,
       due:snapshot.due.slice(0,6).map(x=>({name:x.name,date:x.date,rating:x.rating})),
       weakSurahs:snapshot.weakSurahs.slice(0,6).map(x=>({name:x.name,rating:x.rating})),
