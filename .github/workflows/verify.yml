@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, feature/simple-daily-quran-flow, feature/embedded-mushaf-reader, feature/ayah-memorization-self-test, feature/enter-reveal-ayah, feature/smart-random-memorization-quiz, feature/quran-personal-mentor, feature/deep-mentor-conversation, feature/mentor-readable-default-smart-session]
+    branches: [main, feature/simple-daily-quran-flow, feature/embedded-mushaf-reader, feature/ayah-memorization-self-test, feature/enter-reveal-ayah, feature/smart-random-memorization-quiz, feature/quran-personal-mentor, feature/deep-mentor-conversation, feature/mentor-readable-default-smart-session, feature/grounded-mentor-provider-choice]
   pull_request:
     branches: [main]
 jobs:
@@ -28,6 +28,8 @@ jobs:
           node --check functions/_lib/mentor-auth.js
           node --check functions/api/mentor/session.js
           node --check functions/api/mentor.js
+          node --check functions/api/mentor/compare.js
+          node --check functions/_lib/mentor-comparison.js
       - name: Run tests
         run: npm test
       - name: Validate Cloudflare Pages build

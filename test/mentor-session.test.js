@@ -39,7 +39,7 @@ test('incorrect token never creates session, explicit logout revokes browser coo
 test('signed-cookie authentication reaches AI inference without resending raw activation secret',async()=>{
   let count=0;
   const d1={prepare(sql){return {bind(...args){return {async run(){return {};},async first(){return {calls:1};}}},async run(){return {}}}}};
-  const env={MENTOR_ACCESS_TOKEN:secret,MENTOR_QUOTA_DB:d1,AI:{run:async()=>{count++;return {choices:[{message:{content:'خطة مرتبة لسورة عبس'}}]};}}};
+  const env={MENTOR_ACCESS_TOKEN:secret,MENTOR_QUOTA_DB:d1,AI:{run:async()=>{count++;return {choices:[{message:{content:'خطة مرتبة للمراجعة'}}]};}}};
   const cookie=(await createMentorCookie(secret)).split(';')[0];
   const req=new Request('https://rihlati-quran.pages.dev/api/mentor',{
     method:'POST',headers:{Origin:'https://rihlati-quran.pages.dev',Cookie:cookie,'Content-Type':'application/json'},
@@ -47,6 +47,6 @@ test('signed-cookie authentication reaches AI inference without resending raw ac
   });
   const response=await runMentor({request:req,env});
   assert.equal(response.status,200);
-  assert.equal((await response.json()).answer,'خطة مرتبة لسورة عبس');
+  assert.equal((await response.json()).answer,'خطة مرتبة للمراجعة');
   assert.equal(count,1);
 });

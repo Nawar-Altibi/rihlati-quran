@@ -58,11 +58,40 @@ test('cloud AI context is whitelisted and never includes private notes or raw ac
   assert.equal(serialized.includes('private-unit-token'),false);
   assert.equal(serialized.includes('private medical secret'),false);
   assert.equal(packet.question,'ممكن تعطيني برنامج؟');
-  assert.ok(Object.keys(packet.context).length<=10);
+  assert.ok(Object.keys(packet.context).length<=11);
 });
 test('stage transitions and incomplete memory preserve honest context',()=>{
   const d=data();d.settings.simpleStage='tabarak';
   const s=buildMentorSnapshot(d,date);
   assert.equal(s.stage.newMemorization,false);
   assert.match(answerMentorLocally(s,'شو أحفظ بكرا؟'),/تثبيت المحفوظ/);
+});
+
+test('daily plan is evidence-limited, cannot assign a full Juz from legacy placeholders',()=>{
+  const d=data();d.settings.simpleStage='tabarak';d.settings.dailyMinutes=30;
+  const s=buildMentorSnapshot(d,date),plan=generateMentorPlan(s);
+  assert.equal(plan.length,1);
+  assert.equal(plan[0].type,'verify');
+  assert.equal(plan[0].surah,null);
+  assert.equal(plan[0].minutes,30);
+  assert.equal(s.trackedSurahs,0);
+});
+test('tracked unfinished future memorization does not become a confirmed review',()=>{
+  const d=data();
+  d.units.push({id:'wip',method:'surah',surah:80,status:'قيد الحفظ'});
+  const s=buildMentorSnapshot(d,date);
+  assert.equal(s.trackedSurahs,0);
+  assert.equal(generateMentorPlan(s)[0].type,'verify');
+});
+test('all recommended evidence minutes fit within available time budget',()=>{
+  const d=data();
+  d.settings.dailyMinutes=30;
+  for(const [id,surah] of [['a',78],['b',79],['c',80]]){
+    d.units.push({id,method:'surah',surah,status:'يحتاج تثبيت',lastRating:'ضعيف'});
+    d.activities.push({id:'done-'+id,type:'revision',completed:true,unitId:id,date});
+    d.revisions.push({id:'due-'+id,unitId:id,dueDate:date,done:false});
+  }
+  const p=generateMentorPlan(buildMentorSnapshot(d,date));
+  assert.ok(p.every(x=>[78,79,80].includes(x.surah)));
+  assert.equal(p.reduce((sum,x)=>sum+x.minutes,0),30);
 });
