@@ -16,7 +16,7 @@ function mockQuota(){
   return {prepare(sql){
     return {bind(...args){return {
       async run(){return {success:true};},
-      async first(){if(!sql.includes('UPDATE'))return null;if(calls>=args[1])return null;return {calls:++calls};}
+      async first(){if(!sql.includes('UPDATE'))return null;if(calls+args[1]>12)return null;return {calls:(calls+=args[1])};}
     };},async run(){return {success:true};}}
   },get calls(){return calls}};
 }
