@@ -82,15 +82,6 @@ export function findUnsupportedStudyClaims(answer,question,evidence){
 }
 
 const STUDY_KEYS={
-    const pattern=new RegExp('(?:راجع|مراجعة|احفظ|حفظ|ثبّت|تثبيت)\\s+(?:سورة\\s+)?'+esc+'(?=[\\s،).:!؟\\-]|$)','u');
-    const surahPattern=new RegExp('سورة\\s+'+esc+'(?=[\\s،).:!؟\\-]|$)','u');
-    if(pattern.test(answer)||surahPattern.test(answer))unauthorized.push(name);
-  }
-  if(/(?:راجع|مراجعة|حفظ|احفظ)\s+(?:ال)?(?:جزء\s*29|جزء\s*30|الجزء\s+ال(?:عمّ|ثاني)|جزء\s+عمّ|جزء\s+تبارك)/u.test(answer))unauthorized.push('مراجعة جزء كامل دون سجل مؤكد');
-  return unauthorized;
-}
-
-const STUDY_KEYS={
   units:['surah','juz','method','startAyah','endAyah','pages','date','status','rating','lastReviewed','isGeneralPlaceholder','note'],
   activities:['date','type','surah','rating','completed','pages','note'],
   revisions:['dueDate','surah','done','rating','note'],
