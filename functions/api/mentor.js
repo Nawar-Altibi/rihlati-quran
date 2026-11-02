@@ -81,7 +81,7 @@ export function findUnsupportedStudyClaims(answer,question,evidence){
   return unsupported;
 }
 
-const STUDY_KEYS={');
+const STUDY_KEYS={
     const pattern=new RegExp('(?:راجع|مراجعة|احفظ|حفظ|ثبّت|تثبيت)\\s+(?:سورة\\s+)?'+esc+'(?=[\\s،).:!؟\\-]|$)','u');
     const surahPattern=new RegExp('سورة\\s+'+esc+'(?=[\\s،).:!؟\\-]|$)','u');
     if(pattern.test(answer)||surahPattern.test(answer))unauthorized.push(name);
