@@ -17,7 +17,7 @@ test('valid activation sets HttpOnly Secure SameSite cookie for 30 days, no plai
   assert.equal(cookie.includes(secret),false);
   const cookieValue=cookie.split(';')[0];
   assert.equal(await hasMentorSession(request('GET',{Cookie:cookieValue}),secret),true);
-  assert.equal((await onRequestGet({request:request('GET',{Cookie:cookieValue}),env:{MENTOR_ACCESS_TOKEN:secret}}).json()).authenticated,true);
+  assert.equal((await (await onRequestGet({request:request('GET',{Cookie:cookieValue}),env:{MENTOR_ACCESS_TOKEN:secret}})).json()).authenticated,true);
 });
 test('tampering, expiry, secret rotation and malicious origins invalidate cookies',async()=>{
   const cookie=(await createMentorCookie(secret,Date.now())).split(';')[0];
