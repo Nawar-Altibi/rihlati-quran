@@ -72,7 +72,7 @@ export function findUnsupportedStudyClaims(answer,question,evidence){
     if(allowed.has(name)||String(question).includes(name))continue;
     const patterns=[
       'سورة '+name,'راجع '+name,'راجع سورة '+name,'مراجعة '+name,
-      'احفظ '+name,'احفظ سورة '+name,'ثبّت '+name,'تثبيت '+name
+      'احفظ '+name,'احفظ سورة '+name,'ثبّت '+name,'تثبيت '+name,'ثم '+name
     ];
     if(patterns.some(phrase=>answer.includes(phrase)))unsupported.push(name);
   }
