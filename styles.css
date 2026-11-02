@@ -337,3 +337,14 @@ body.dark .mentor-facts span,body.dark .mentor-message-user,body.dark .mentor-st
 .mentor-secret{margin-top:15px}
 .mentor-auth-error{color:var(--red)!important}
 @media(max-width:700px){.mentor-settings{padding:13px}.mentor-settings-heading{align-items:flex-start;flex-direction:column}.mentor-auth-row{align-items:stretch;flex-direction:column}.mentor-auth-active{align-items:flex-start;flex-direction:column}.mentor-conversation{height:390px}.mentor-message-assistant{padding:12px 13px}}
+
+
+.mentor-comparison{margin:16px 0;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:18px 20px}
+.mentor-comparison h3{margin:0 0 6px;font-size:16px;color:var(--green)}
+.mentor-comparison>p{font-size:12px;color:var(--muted);line-height:1.85;max-width:780px}
+.mentor-comparison>button{margin:8px 0}
+.mentor-compare-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:12px}
+.mentor-compare-grid section{border:1px solid var(--line);border-radius:12px;padding:14px;min-width:0;background:var(--surface2)}
+.mentor-compare-grid section>b{display:block;color:var(--green);font-size:14px;margin-bottom:8px}
+.mentor-compare-grid section>p{font-size:12px;color:var(--muted)}
+@media(max-width:800px){.mentor-compare-grid{grid-template-columns:1fr}.mentor-comparison{padding:13px}}
