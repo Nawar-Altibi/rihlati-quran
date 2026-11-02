@@ -24,7 +24,10 @@ export async function onRequestPost({request,env}){
   try{
     const input=await request.text();
     if(input.length>128)return reply({error:'الطلب غير صالح.'},400);
-    if(JSON.parse(input)?.example!==MODEL_COMPARISON_EXAMPLE.id)return reply({error:'المقارنة تعمل على مثال وهمي ثابت فقط.'},400);
+    const payload=JSON.parse(input);
+    if(!payload || typeof payload!=='object'||Array.isArray(payload)||
+       Object.keys(payload).length!==1 || payload.example!==MODEL_COMPARISON_EXAMPLE.id)
+      return reply({error:'المقارنة تعمل على مثال وهمي ثابت فقط، ولا تستقبل بيانات شخصية.'},400);
   }catch{return reply({error:'الطلب غير صالح.'},400);}
   // Two calls consume 2 of the same global D1 daily allowance, atomically.
   try{if(!(await consumeQuota(env.MENTOR_QUOTA_DB,2)))return reply({error:'انتهت حصة AI اليومية للمقارنة.'},429);}
