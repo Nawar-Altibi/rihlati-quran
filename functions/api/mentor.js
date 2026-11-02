@@ -65,17 +65,23 @@ export function sanitizePlanEvidence(raw){
   };
 }
 export function findUnsupportedStudyClaims(answer,question,evidence){
-  // The model can explain generally, but it must not assign named untracked
-  // Surahs in a personal day-plan. Reject and let the app show its verified
-  // local plan rather than relaying fabricated tasks.
   if(!/(راجع|مراجعة|أحفظ|احفظ|خطة|اليوم|ورد|برنامج|مهامي)/i.test(question))return [];
   const allowed=new Set(evidence?.verifiedSurahs||[]);
-  const names=SURAH_NAMES.map(x=>x.name);
-  const unauthorized=[];
-  for(const name of names){
+  const unsupported=[];
+  for(const {name} of SURAH_NAMES) {
     if(allowed.has(name)||String(question).includes(name))continue;
-    // Only match literal recommendations, not a bare name in unrelated discussion.
-    const esc=name.replace(/[.*+?^${}()|[\]\\]/g,'\\const STUDY_KEYS={');
+    const patterns=[
+      'سورة '+name,'راجع '+name,'راجع سورة '+name,'مراجعة '+name,
+      'احفظ '+name,'احفظ سورة '+name,'ثبّت '+name,'تثبيت '+name
+    ];
+    if(patterns.some(phrase=>answer.includes(phrase)))unsupported.push(name);
+  }
+  if(/(?:راجع|مراجعة|حفظ|احفظ)\s+(?:ال)?(?:جزء\s*29|جزء\s*30|الجزء\s+ال(?:عمّ|ثاني)|جزء\s+عمّ|جزء\s+تبارك)/u.test(answer))
+    unsupported.push('مراجعة جزء كامل دون سجل مؤكد');
+  return unsupported;
+}
+
+const STUDY_KEYS={');
     const pattern=new RegExp('(?:راجع|مراجعة|احفظ|حفظ|ثبّت|تثبيت)\\s+(?:سورة\\s+)?'+esc+'(?=[\\s،).:!؟\\-]|$)','u');
     const surahPattern=new RegExp('سورة\\s+'+esc+'(?=[\\s،).:!؟\\-]|$)','u');
     if(pattern.test(answer)||surahPattern.test(answer))unauthorized.push(name);
