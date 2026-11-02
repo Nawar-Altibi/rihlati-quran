@@ -34,7 +34,7 @@ export function createMentorUI({getData,render,navigate,openSurah,openReview,sta
   function clearLegacyKey(){try{sessionStorage.removeItem(LEGACY_TOKEN);}catch{}}
   function refreshUI(){if(typeof document!=='undefined'&&document.querySelector('#mentor-question-form'))render();}
   function append(role,text,mode='local'){
-    messages.push({role,text:String(text).slice(0,3500),mode});
+    messages.push({role,text:String(text).slice(0,6500),mode});
     messages=messages.slice(-16);
     try{sessionStorage.setItem(CHAT_SESSION_KEY,JSON.stringify(messages));}catch{}
   }
