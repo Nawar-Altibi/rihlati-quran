@@ -303,3 +303,37 @@ body.dark .mentor-facts span,body.dark .mentor-message-user,body.dark .mentor-st
 .mentor-data-preview{padding:10px;border:1px solid var(--line);background:var(--surface);color:var(--text);overflow:auto;max-height:220px;max-width:100%;font:11px/1.6 monospace;white-space:pre-wrap;word-break:break-word}
 .mentor-conversation{height:350px}
 @media(max-width:650px){.mentor-conversation{height:310px}.mentor-consent-options{padding:10px}}
+
+
+/* Organised RTL AI answers with safe Markdown hierarchy */
+.mentor-response-content{font-size:13px;line-height:2;color:var(--text);direction:rtl;text-align:right;overflow-wrap:anywhere}
+.mentor-response-content p{margin:0 0 11px;line-height:2}
+.mentor-response-content p:last-child{margin-bottom:0}
+.mentor-response-content strong{font-weight:700;color:var(--green)}
+.mentor-response-content h3,.mentor-response-content h4{font-size:15px;margin:14px 0 9px;color:var(--green);font-weight:700;line-height:1.55}
+.mentor-response-content h3:first-child,.mentor-response-content h4:first-child{margin-top:0}
+.mentor-response-content ol,.mentor-response-content ul{margin:9px 0 15px;padding:0 22px 0 0;display:grid;gap:8px}
+.mentor-response-content li{padding:5px 7px 5px 0;line-height:1.95}
+.mentor-response-content ol li::marker{font-weight:700;color:var(--green)}
+.mentor-response-content ul li::marker{color:var(--green)}
+.mentor-response-content code{background:var(--surface2);border-radius:5px;padding:2px 5px}
+.mentor-message-assistant{background:var(--surface);border-color:var(--line);padding:17px 19px;max-width:100%;box-shadow:0 1px 7px #193e2d05}
+.mentor-message-user{margin-inline-start:12%;background:var(--green-soft);border-radius:14px 14px 4px 14px}
+.mentor-message-meta{font-size:11px;font-weight:600;margin-bottom:9px;color:var(--green)}
+.mentor-conversation{height:min(56vh,530px);min-height:310px;gap:12px}
+.mentor-settings{margin-top:15px;background:var(--surface);border:1px solid var(--line);border-radius:15px;padding:16px 20px}
+.mentor-settings-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.mentor-settings-heading h3{margin:0;font-size:16px;color:var(--green)}
+.mentor-settings-heading p{margin:1px 0 0;font-size:11px;color:var(--muted)}
+.mentor-status-list{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.mentor-state{background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:5px 10px;font-size:11px}
+.mentor-state-on{background:var(--green-soft);color:var(--green);font-weight:700}
+.mentor-settings .mentor-consent-options{margin-top:14px}
+.mentor-privacy-info{font-size:11px;color:var(--muted);line-height:1.8}
+.mentor-chat-hint{font-size:11px;color:var(--muted);margin:9px 0 0}
+.mentor-auth-active{display:flex;align-items:center;justify-content:space-between;gap:10px;border-top:1px solid var(--line);margin-top:14px;padding-top:12px;font-size:12px;color:var(--green)}
+.mentor-auth-row{display:flex;align-items:center;gap:8px}
+.mentor-auth-row input{min-width:0;flex:1}
+.mentor-secret{margin-top:15px}
+.mentor-auth-error{color:var(--red)!important}
+@media(max-width:700px){.mentor-settings{padding:13px}.mentor-settings-heading{align-items:flex-start;flex-direction:column}.mentor-auth-row{align-items:stretch;flex-direction:column}.mentor-auth-active{align-items:flex-start;flex-direction:column}.mentor-conversation{height:390px}.mentor-message-assistant{padding:12px 13px}}
