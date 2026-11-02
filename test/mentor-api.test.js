@@ -39,7 +39,7 @@ test('same-origin only; rejects missing/incorrect secret before spending quota',
   const foreign=await onRequestPost({request:request(payload,secret,'https://evil.example'),env});
   assert.equal(foreign.status,403);
   const invalid=await onRequestPost({request:request(payload,'invalid'),env});
-  assert.equal(invalid.status,403);
+  assert.equal(invalid.status,401);
   assert.equal(usage.calls,0);assert.equal(invoked,0);
 });
 test('valid authenticated question consumes only one quota token and returns a short grounded response',async()=>{
