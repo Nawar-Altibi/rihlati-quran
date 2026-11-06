@@ -68,9 +68,9 @@ export function startSuggestedPlan(data,start=addDays(todayKey(),1),id=()=>crypt
   if(!isValidDateKey(start))throw new Error('تاريخ البداية غير صالح.');
   // This template records intentions, never past memorization or a completed task.
   const template=[
-    {date:start,surah:78,kind:'review',minutes:12,notes:'ابدأ بسماع نفسك قبل فتح المصحف.'},
-    {date:start,surah:79,kind:'review',minutes:12,notes:'ركّز على الآيات التي نسيتها.'},
-    {date:start,surah:80,kind:'review',minutes:12,notes:'مراجعة تمهيدية، بلا افتراض إتقان.'},
+    {date:start,surah:78,kind:'review',minutes:10,notes:'ابدأ بسماع نفسك قبل فتح المصحف.'},
+    {date:start,surah:79,kind:'review',minutes:10,notes:'ركّز على الآيات التي نسيتها.'},
+    {date:start,surah:80,kind:'review',minutes:10,notes:'مراجعة تمهيدية، بلا افتراض إتقان.'},
     {date:addDays(start,1),surah:81,kind:'review',minutes:20,notes:'سورة التكوير؛ عدّل الموعد إذا احتجت وقتًا للتثبيت.'}
   ];
   return template.map(item=>savePlanEntry(data,item,id));
