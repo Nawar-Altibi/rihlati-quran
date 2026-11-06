@@ -38,9 +38,9 @@ export function createMemorizeUI({getData,persist,toast,openModal,render}) {
     to.innerHTML=verses(meta.ayahs,b);
     refreshSummary();
   }
-  function open() {
+  function open(preselected=null) {
     const stage=getData().settings.simpleStage||'amma';
-    const initial=stage==='tabarak'?67:stage==='qad'?58:stage==='baqarah'?2:78;
+    const initial=SURAH_NAMES.some(s=>s.number===Number(preselected))?Number(preselected):(stage==='tabarak'?67:stage==='qad'?58:stage==='baqarah'?2:78);
     const count=SURAH_NAMES[initial-1].ayahs;
     openModal('سجّل حفظك الجديد','<input type="hidden" name="simpleMemorization" value="1">'+
       '<div class="simple-modal-intro">اختار السورة والآيات فقط. البرنامج يحدد الجزء والصفحات تلقائيًا. إذا كنت تثبّت محفوظًا قديمًا، استخدم زر «راجعت».</div>'+
