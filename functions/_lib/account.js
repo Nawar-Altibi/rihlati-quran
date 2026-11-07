@@ -2,6 +2,7 @@
 // Config is intentionally fail-closed until the owner provisions Auth + SMTP + RLS.
 const ACCESS='__Host-rihlati-access';
 const REFRESH='__Host-rihlati-refresh';
+const RESET='__Host-rihlati-recovery';
 const ALLOWED_PATH=/^\/(?:auth\/v1|rest\/v1)\/[a-zA-Z0-9_/?=&.,:%-]+$/;
 
 export function accountConfig(env={}){
@@ -12,7 +13,7 @@ export function accountConfig(env={}){
     const p=new URL(url);
     valid=p.protocol==='https:'&&(/^[a-z0-9-]+\.supabase\.co$/.test(p.hostname))&&p.pathname==='/'&&p.username===''&&p.password==='';
   }catch{}
-  const enabled=valid && key.length>18 && !key.startsWith('sb_secret_') && env.ACCOUNTS_ENABLED==='true';
+  const enabled=valid && key.length>18 && !key.startsWith('sb_secret_') && env.ACCOUNTS_ENABLED==='true' && String(env.AUTH_FLOW_SECRET||'').length>=32;
   const captchaConfigured=String(env.TURNSTILE_SITE_KEY||'').length>8 &&
     String(env.TURNSTILE_SECRET_KEY||'').length>8;
   return {
@@ -64,7 +65,7 @@ export function setSessionCookies(headers,session){
   headers.append('Set-Cookie',REFRESH+'='+encodeURIComponent(session.refresh_token)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000');
 }
 export function clearSessionCookies(headers){
-  for(const name of [ACCESS,REFRESH])
+  for(const name of [ACCESS,REFRESH,RESET])
     headers.append('Set-Cookie',name+'=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
 }
 
@@ -113,6 +114,39 @@ export async function requireUser(request,env){
   setSessionCookies(h,session);
   return {user:session.user,token:session.access_token,headers:h};
 }
+
+const encode64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+const decode64=encoded=>{
+  const raw=atob(encoded.replace(/-/g,'+').replace(/_/g,'/'));
+  return Uint8Array.from(raw,ch=>ch.charCodeAt(0));
+};
+async function flowKey(env){
+  if(typeof env.AUTH_FLOW_SECRET!=='string'||env.AUTH_FLOW_SECRET.length<32)throw new Error('Recovery secret is not configured.');
+  return crypto.subtle.importKey('raw',new TextEncoder().encode(env.AUTH_FLOW_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
+}
+export async function setRecoveryProof(headers,env,userId){
+  const payload=[userId,String(Date.now()+15*60000),crypto.randomUUID()].join('|');
+  const bytes=new TextEncoder().encode(payload);
+  const signature=await crypto.subtle.sign('HMAC',await flowKey(env),bytes);
+  headers.append('Set-Cookie',RESET+'='+encode64(bytes)+'.'+encode64(new Uint8Array(signature))+
+    '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900');
+}
+export async function hasRecoveryProof(request,env,userId){
+  const value=parseCookies(request)[RESET];
+  if(!value||value.length>550||!value.includes('.'))return false;
+  try{
+    const [payload,signature]=value.split('.');
+    if(!payload||!signature)return false;
+    const bytes=decode64(payload);
+    const [owner,expiry,nonce]=new TextDecoder().decode(bytes).split('|');
+    if(owner!==userId||!nonce||nonce.length<20||!Number.isSafeInteger(Number(expiry))||Number(expiry)<Date.now())return false;
+    return crypto.subtle.verify('HMAC',await flowKey(env),decode64(signature),bytes);
+  }catch{return false;}
+}
+export function clearRecoveryProof(headers){
+  headers.append('Set-Cookie',RESET+'=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0');
+}
+
 export function publicUser(user){
   if(!user?.id)return null;
   return {id:user.id,email:user.email||'',displayName:String(user.user_metadata?.display_name||'').slice(0,60)};
