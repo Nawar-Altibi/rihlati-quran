@@ -1,4 +1,4 @@
-import { SURAH_NAMES, makeInitialData, DEFAULT_SETTINGS } from './data.js';
+import { SURAH_NAMES, makeNewUserData, DEFAULT_SETTINGS } from './data.js';
 import { todayKey, addDays, dayDiff, calcProgress, nextReview, completionEstimate, streaks, validateUnit, isValidDateKey } from './logic.js';
 import { loadData, migrateData } from './storage.js';
 import { createSimpleUI } from './simple-ui.js';
@@ -8,8 +8,8 @@ import { applySidebarVectors } from './ui-icons.js';
 import { createAccountClient } from './account-ui.js';
 
 const STORE='rihlati-quran-v1';
-const saved=loadData(localStorage,STORE,makeInitialData,DEFAULT_SETTINGS);
-let data=saved.data||makeInitialData(), storageLocked=Boolean(saved.error);
+const saved=loadData(localStorage,STORE,makeNewUserData,DEFAULT_SETTINGS);
+let data=saved.data||makeNewUserData(), storageLocked=Boolean(saved.error);
 let simpleUI, mushafUI, accountClient=null;
 let currentView='today', selectedJuz=null, calendarMonth=new Date(), selectedDay=todayKey(), sessionSurahFilter='all';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
@@ -212,10 +212,10 @@ applySidebarVectors();
 accountClient=createAccountClient({
   getData:()=>data,
   setData:next=>{data=next;storageLocked=false;applyThemeAppearance(data.settings.theme==='dark');navigate('today');},
-  guestData:()=>{const result=loadData(localStorage,STORE,makeInitialData,DEFAULT_SETTINGS);return result.error?null:result.data;},
+  guestData:()=>{const result=loadData(localStorage,STORE,makeNewUserData,DEFAULT_SETTINGS);return result.error?null:result.data;},
   restoreGuest:()=>{
-    const result=loadData(localStorage,STORE,makeInitialData,DEFAULT_SETTINGS);
-    data=result.data||makeInitialData();storageLocked=Boolean(result.error);
+    const result=loadData(localStorage,STORE,makeNewUserData,DEFAULT_SETTINGS);
+    data=result.data||makeNewUserData();storageLocked=Boolean(result.error);
     applyThemeAppearance(data.settings.theme==='dark');navigate('today');
   },toast
 });
