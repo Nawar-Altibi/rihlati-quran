@@ -1,6 +1,6 @@
 import {
   accountConfig,originMatches,json,readJson,fail,setSessionCookies,clearSessionCookies,
-  supabase,supabaseData,requireUser,publicUser,accountResponse,
+  supabase,supabaseData,requireUser,publicUser,accountResponse,googleProviderReady,
   storeRecoveryProof,setRecoveryProof,consumeRecoveryProof,clearRecoveryProof
 } from '../_lib/account.js';
 
@@ -29,15 +29,17 @@ function requiredCaptcha(payload,settings){
 
 export async function onRequestGet({request,env}){
   const settings=accountConfig(env);
-  if(!settings.enabled)return json({enabled:false,registrationEnabled:false,authenticated:false});
+  if(!settings.enabled)return json({enabled:false,registrationEnabled:false,googleSignInEnabled:false,authenticated:false});
   try{
     const session=await requireUser(request,env);
     return accountResponse({
       enabled:true,registrationEnabled:settings.registrationEnabled,
+      googleSignInEnabled:await googleProviderReady(env),
       captchaSiteKey:settings.captchaSiteKey,authenticated:!!session.user,
       user:publicUser(session.user)
     },200,session.headers);
-  }catch{return json({enabled:true,authenticated:false,error:'تعذر الاتصال بالحساب حاليًا.'},503);}
+  }catch{return json({enabled:true,registrationEnabled:settings.registrationEnabled,googleSignInEnabled:false,
+    authenticated:false,error:'تعذر الاتصال بالحساب حاليًا.'},503);}
 }
 
 export async function onRequestPost({request,env}){

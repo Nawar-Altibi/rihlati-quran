@@ -31,7 +31,7 @@ const counts=doc=>({
 });
 
 export function createAccountClient({getData,setData,guestData,restoreGuest,toast}){
-  let available=false,registration=false,siteKey=null,mode='guest',user=null,revision=0;
+  let available=false,registration=false,googleSignIn=false,siteKey=null,mode='guest',user=null,revision=0;
   let modal='',email='',purpose='email',busy=false,error='',sending=false,pending=null,blocked=false;
   let pendingRecovery=null,captchaToken='',turnstileWidgetId=null,resendUntil=0,resendInterval=null;
   const button=document.getElementById('account-entry');
@@ -54,6 +54,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   };
   const htmlInput=(name,label,type='text',placeholder='',props='')=>
     '<label class="account-field"><span>'+label+'</span><input class="input" name="'+name+'" type="'+type+'" placeholder="'+placeholder+'" '+props+'></label>';
+  const googleIcon=()=>'<svg class="account-google-icon" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path fill="#4285F4" d="M43.6 24.5c0-1.4-.1-2.8-.4-4.1H24v7.8h11a9.4 9.4 0 0 1-4.1 6.2v5h6.6c3.9-3.6 6.1-8.8 6.1-14.9Z"/><path fill="#34A853" d="M24 44c5.5 0 10.1-1.8 13.5-4.8l-6.6-5c-1.8 1.2-4 1.9-6.9 1.9-5.3 0-9.8-3.6-11.4-8.4H5.8v5.2A20 20 0 0 0 24 44Z"/><path fill="#FBBC05" d="M12.6 27.7a12 12 0 0 1 0-7.4v-5.2H5.8a20 20 0 0 0 0 17.8l6.8-5.2Z"/><path fill="#EA4335" d="M24 12c3 0 5.7 1 7.8 3.1l5.9-5.9C34.1 5.9 29.5 4 24 4A20 20 0 0 0 5.8 15.1l6.8 5.2C14.2 15.6 18.7 12 24 12Z"/></svg>';
   function captcha(){
     if(!siteKey)return '';
     return '<div class="account-captcha"><div id="account-turnstile"></div><small>تحقّق أمني لحماية الحسابات من الطلبات الآلية.</small></div>';
@@ -75,7 +76,11 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     const emailInput=htmlInput('email','البريد الإلكتروني','email','example@email.com','required autocomplete="email" value="'+esc(email)+'"');
     if(modal==='disabled')content='<p class="account-notice">ميزة الحسابات قيد الإعداد. الموقع شغّال حاليًا كضيف بدون ما يغيّر بياناتك.</p>';
     if(modal==='loading')content='<div class="account-form"><button type="button" class="primary account-submit" data-account-action="retry-state">حاول تحميل التقدم مجددًا</button><button type="button" class="account-logout" data-account-action="logout">أكمل كضيف · تسجيل الخروج</button></div>';
-    if(modal==='login')content='<form class="account-form" data-account-form="login">'+emailInput+
+    if(modal==='login')content=(googleSignIn
+      ?'<form class="account-google-form" data-google-auth method="post" action="/api/account/google/start"><button type="submit" class="account-google-button" '+(busy?'disabled':'')+'>'+googleIcon()+'<span>'+(busy?'جاري تسجيل الدخول...':'المتابعة باستخدام Google')+'</span></button></form>'
+      :'<button type="button" class="account-google-button" disabled>'+googleIcon()+'<span>تسجيل الدخول باستخدام Google غير متاح حاليًا</span></button>')+
+      '<div class="account-auth-divider"><span>أو المتابعة بالبريد الإلكتروني</span></div>'+
+      '<form class="account-form" data-account-form="login">'+emailInput+
       htmlInput('password','كلمة المرور','password','••••••••••••','required autocomplete="current-password"')+
       captcha()+formButton('تسجيل الدخول')+'</form>'+
       '<div class="account-links"><button type="button" data-account-action="signup">إنشاء حساب جديد</button>'+
@@ -358,15 +363,26 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       if(control)void handleAction(control.dataset.accountAction);
     });
     root?.addEventListener('submit',e=>{
+      const googleForm=e.target.closest('[data-google-auth]');
+      if(googleForm){
+        if(busy){e.preventDefault();return;}
+        busy=true;
+        const submit=googleForm.querySelector('[type="submit"]');
+        if(submit){submit.disabled=true;submit.querySelector('span').textContent='جاري تسجيل الدخول...';}
+        return;
+      }
       const form=e.target.closest('[data-account-form]');
       if(form){e.preventDefault();void handleForm(form);}
     });
     window.addEventListener('online',()=>{if(inAccount()&&pending&&!blocked)void sync();});
     buttonView();
+    const returnStatus=new URL(window.location.href).searchParams.get('account-auth');
+    if(returnStatus)history.replaceState(null,'',window.location.pathname+window.location.hash);
     try{
       const session=await api('');
       available=Boolean(session.enabled);
       registration=Boolean(session.registrationEnabled);
+      googleSignIn=Boolean(session.googleSignInEnabled);
       siteKey=typeof session.captchaSiteKey==='string'?session.captchaSiteKey:null;
       if(available&&session.authenticated&&session.user){
         user=session.user;
@@ -375,6 +391,17 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       }
     }catch{available=false; /* Accounts unavailable; keep guest app safe. */ }
     buttonView();
+    if(returnStatus==='google-success'&&user)toast('تم تسجيل الدخول باستخدام Google. أهلًا بك في رحلتك!');
+    else if(returnStatus==='google-success'){
+      open('login');error='تعذر إكمال جلسة Google، حاول تسجيل الدخول مرة أخرى.';renderModal();
+    }
+    else if(returnStatus&&returnStatus!=='google-success'){
+      open('login');
+      error=returnStatus==='google-cancelled'?'تم إلغاء تسجيل الدخول باستخدام Google.':
+        returnStatus==='google-unavailable'?'تسجيل الدخول باستخدام Google غير متاح حاليًا.':
+          'تعذر تسجيل الدخول باستخدام Google، حاول مجددًا.';
+      renderModal();
+    }
   }
   return {start,open,save,isAccount:()=>Boolean(user),user:logUser};
 }

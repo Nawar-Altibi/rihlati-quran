@@ -3,7 +3,8 @@
 const ACCESS='__Host-rihlati-access';
 const REFRESH='__Host-rihlati-refresh';
 const RESET='__Host-rihlati-recovery';
-const ALLOWED_PATH=/^\/(?:auth\/v1|rest\/v1)\/[a-zA-Z0-9_/?=&.,:%-]+$/;
+const OAUTH='__Host-rihlati-oauth-flow';
+const ALLOWED_PATH=/^\/(?:auth\/v1|rest\/v1)\/[a-zA-Z0-9_/?=&.,:%+-]+$/;
 
 export function accountConfig(env={}){
   const url=String(env.SUPABASE_URL||'');
@@ -18,6 +19,7 @@ export function accountConfig(env={}){
     String(env.TURNSTILE_SECRET_KEY||'').length>8;
   return {
     enabled, registrationEnabled:enabled&&env.ACCOUNT_REGISTRATION_ENABLED==='true'&&captchaConfigured,
+    googleSignInEnabled:enabled&&env.GOOGLE_SIGNIN_ENABLED==='true',
     captchaSiteKey:enabled?String(env.TURNSTILE_SITE_KEY||''):null
   };
 }
@@ -65,8 +67,38 @@ export function setSessionCookies(headers,session){
   headers.append('Set-Cookie',REFRESH+'='+encodeURIComponent(session.refresh_token)+'; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=2592000');
 }
 export function clearSessionCookies(headers){
-  for(const name of [ACCESS,REFRESH,RESET])
+  for(const name of [ACCESS,REFRESH,RESET,OAUTH])
     headers.append('Set-Cookie',name+'=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
+}
+
+export async function setOAuthFlow(headers,env,{state,verifier}){
+  const expiresAt=Date.now()+10*60000;
+  const payload=JSON.stringify({state,verifier,expiresAt});
+  const bytes=new TextEncoder().encode(payload);
+  const signedBytes=new TextEncoder().encode('oauth-flow-v1\n'+payload);
+  const signature=await crypto.subtle.sign('HMAC',await flowKey(env),signedBytes);
+  headers.append('Set-Cookie',OAUTH+'='+encode64(bytes)+'.'+encode64(new Uint8Array(signature))+
+    '; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600');
+}
+export async function readOAuthFlow(request,env){
+  const value=parseCookies(request)[OAUTH];
+  if(!value||value.length>1200||!value.includes('.'))return null;
+  try{
+    const [payload,signature]=value.split('.');
+    if(!payload||!signature)return null;
+    const bytes=decode64(payload);
+    const data=new TextDecoder().decode(bytes);
+    const signedBytes=new TextEncoder().encode('oauth-flow-v1\n'+data);
+    if(!(await crypto.subtle.verify('HMAC',await flowKey(env),decode64(signature),signedBytes)))return null;
+    const flow=JSON.parse(data);
+    if(typeof flow.state!=='string'||!/^[-_A-Za-z0-9]{43}$/.test(flow.state)||
+      typeof flow.verifier!=='string'||!/^[-_A-Za-z0-9]{43,128}$/.test(flow.verifier)||
+      !Number.isSafeInteger(flow.expiresAt)||flow.expiresAt<Date.now()||flow.expiresAt>Date.now()+10*60000+5000)return null;
+    return flow;
+  }catch{return null;}
+}
+export function clearOAuthFlow(headers){
+  headers.append('Set-Cookie',OAUTH+'=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0');
 }
 
 export async function supabase(env,path,options={}){
@@ -78,11 +110,20 @@ export async function supabase(env,path,options={}){
   if(options.body!=null)headers.set('Content-Type','application/json');
   return fetch(String(env.SUPABASE_URL).replace(/\/$/,'')+path,{
     method:options.method||'GET',headers,body:options.body==null?undefined:JSON.stringify(options.body),
-    signal:AbortSignal.timeout(12000),redirect:'error',cache:'no-store'
+    signal:AbortSignal.timeout(12000),redirect:options.redirect||'error',cache:'no-store'
   });
 }
 export async function supabaseData(response){
   try{return await response.json()}catch{return {}}
+}
+export async function googleProviderReady(env){
+  if(!accountConfig(env).googleSignInEnabled)return false;
+  try{
+    const response=await supabase(env,'/auth/v1/settings');
+    if(!response.ok)return false;
+    const settings=await supabaseData(response);
+    return settings?.external?.google===true;
+  }catch{return false;}
 }
 export async function requireUser(request,env){
   const c=parseCookies(request),h=new Headers();
@@ -176,7 +217,8 @@ export function clearRecoveryProof(headers){
 
 export function publicUser(user){
   if(!user?.id)return null;
-  return {id:user.id,email:user.email||'',displayName:String(user.user_metadata?.display_name||'').slice(0,60)};
+  const metadata=user.user_metadata||{};
+  return {id:user.id,email:user.email||'',displayName:String(metadata.display_name||metadata.full_name||metadata.name||'').slice(0,60)};
 }
 export function accountResponse(data,status=200,sessionHeaders){
   return json(data,status,sessionHeaders);

@@ -978,6 +978,19 @@ body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{
 .account-dialog-lead h2{font-size:25px;line-height:1.25;margin:0 0 7px}
 .account-dialog-lead p{max-width:395px;margin:auto;font-size:13px;line-height:1.75;color:var(--muted)}
 .account-form{display:grid;gap:12px}
+.account-google-form{width:100%;margin-bottom:14px}
+.account-google-button{
+  width:100%;min-height:48px;display:flex;align-items:center;justify-content:center;gap:11px;
+  padding:9px 14px;border:1px solid #c9cec9;border-radius:11px;background:#fff;color:#25312b;
+  font-weight:700;font-size:14px;line-height:1.45;white-space:normal;overflow-wrap:anywhere;
+  transition:background .16s,border-color .16s,box-shadow .16s;
+}
+.account-google-button:not(:disabled):hover{background:#f7f8f7;border-color:#9ba69d}
+.account-google-button:focus-visible{outline:3px solid #4285f4;outline-offset:2px}
+.account-google-button:disabled{cursor:not-allowed;opacity:.66}
+.account-google-icon{width:21px;height:21px;flex:none}
+.account-auth-divider{display:flex;align-items:center;gap:11px;margin:0 0 14px;color:var(--muted);font-size:12px;text-align:center}
+.account-auth-divider:before,.account-auth-divider:after{content:"";height:1px;flex:1;background:var(--line)}
 .account-field{display:grid;gap:6px;font-size:12px;font-weight:700;color:var(--text)}
 .account-field .input,.account-field .select{width:100%;min-width:0;min-height:44px}
 .account-field input[type=email]{direction:ltr;text-align:left}
@@ -1034,10 +1047,12 @@ body.dark .account-ornament{color:var(--gold);background:var(--green-soft)}
 body.dark .account-links button{color:var(--green)}
 body.dark .account-setup-form,body.dark .account-import-option{background:var(--surface2);border-color:var(--line)}
 body.dark .account-cloud-state{background:var(--green-soft);color:var(--green)}
+body.dark .account-google-button{background:#f8f9fa;color:#25312b;border-color:#d8dce0}
 @media(max-width:600px){
   .account-dialog{padding:17px 16px;border-radius:18px}
   .account-dialog-lead h2{font-size:21px}
   .account-entry{font-size:11px}
+  .account-google-button{min-height:50px;padding-inline:10px;font-size:13px}
 }
 @media(max-height:690px){
   .account-dialog{margin:0 auto}

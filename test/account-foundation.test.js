@@ -1,8 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof,storeRecoveryProof,consumeRecoveryProof} from '../functions/_lib/account.js';
+import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof,storeRecoveryProof,consumeRecoveryProof,readOAuthFlow,setOAuthFlow} from '../functions/_lib/account.js';
 import {onRequestGet as accountGet,onRequestPost as accountPost} from '../functions/api/account.js';
+import {onRequestPost as googleStart} from '../functions/api/account/google/start.js';
+import {onRequestGet as googleCallback} from '../functions/api/account/google/callback.js';
 import {onRequestGet as stateGet,onRequestPut as statePut} from '../functions/api/account/state.js';
 import {passwordsMatch} from '../src/account-ui.js';
 import {makeInitialData,makeNewUserData} from '../src/data.js';
@@ -394,4 +396,177 @@ test('brand-new visitors never load the original author\'s old memorization seed
   assert.match(app,/loadData\(localStorage,STORE,makeNewUserData,DEFAULT_SETTINGS\)/);
   assert.match(app,/const STORE='rihlati-quran-v1'/);
   assert.doesNotMatch(app,/localStorage\.clear\(\)/);
+});
+
+const googleEnv={...env,ACCOUNT_REGISTRATION_ENABLED:'false',GOOGLE_SIGNIN_ENABLED:'true'};
+const googleUser={...user,user_metadata:{full_name:'Google Learner'},identities:[{provider:'google'}]};
+function requestAt(path,method='GET',headers={}){
+  return new Request(origin+path,{method,headers:{...(method==='POST'?{Origin:origin}:{}),...headers}});
+}
+function cookiePair(response){return response.headers.get('Set-Cookie')?.split(';',1)[0]||'';}
+async function startOAuth(){
+  return withFetch(async(url,options)=>{
+    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
+    if(String(url).includes('/auth/v1/authorize?')){
+      assert.equal(options.redirect,'manual');
+      const authorize=new URL(String(url));
+      assert.equal(authorize.searchParams.get('provider'),'google');
+      assert.equal(authorize.searchParams.get('scopes'),'openid email profile');
+      assert.equal(authorize.searchParams.get('code_challenge_method'),'s256');
+      return new Response(null,{status:302,headers:{Location:'https://accounts.google.com/o/oauth2/v2/auth?client_id=public-test'}});
+    }
+    throw new Error('Unexpected OAuth request: '+url);
+  },()=>googleStart({request:requestAt('/api/account/google/start','POST'),env:googleEnv}));
+}
+
+test('Google availability is independent of email registration and fails closed on provider settings',async()=>{
+  assert.equal(accountConfig(googleEnv).registrationEnabled,false);
+  assert.equal(accountConfig(googleEnv).googleSignInEnabled,true);
+  assert.equal(accountConfig({...googleEnv,GOOGLE_SIGNIN_ENABLED:'false'}).googleSignInEnabled,false);
+  const response=await withFetch(async()=>mockResponse({external:{google:false}}),()=>accountGet({request:request(),env:googleEnv}));
+  assert.equal((await response.json()).googleSignInEnabled,false);
+});
+
+test('Google OAuth initiation uses a fixed callback, signed HttpOnly PKCE cookie, state, and Google-only scopes',async()=>{
+  const response=await startOAuth();
+  assert.equal(response.status,303);
+  assert.match(response.headers.get('Location'),/^https:\/\/accounts\.google\.com\//);
+  const cookie=response.headers.get('Set-Cookie');
+  assert.match(cookie,/__Host-rihlati-oauth-flow=/);
+  assert.match(cookie,/HttpOnly/);assert.match(cookie,/Secure/);assert.match(cookie,/SameSite=Lax/);assert.match(cookie,/Max-Age=600/);
+  const value=cookiePair(response);
+  const flow=await readOAuthFlow(new Request(origin,{headers:{Cookie:value}}),googleEnv);
+  assert.ok(flow?.state);assert.equal(flow.verifier.length,43);
+  const second=await withFetch(async(url)=>{
+    const authorize=new URL(String(url));
+    const redirect=new URL(authorize.searchParams.get('redirect_to'));
+    assert.equal(redirect.origin,origin);
+    assert.equal(redirect.pathname,'/api/account/google/callback');
+    assert.equal(redirect.searchParams.get('state'),flow.state);
+    const challenge=authorize.searchParams.get('code_challenge');
+    const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(flow.verifier)));
+    assert.equal(challenge,btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''));
+    return new Response(null,{status:302,headers:{Location:'https://accounts.google.com/o/oauth2/v2/auth'}});
+  },()=>googleStart({request:requestAt('/api/account/google/start','POST'),env:googleEnv}));
+  assert.equal(second.status,303);
+});
+
+test('Google OAuth flow cookie expires and cannot be forged by changing its signed payload',async()=>{
+  const headers=new Headers(),realNow=Date.now;
+  try{
+    Date.now=()=>realNow()-20*60000;
+    await setOAuthFlow(headers,googleEnv,{state:'A'.repeat(43),verifier:'B'.repeat(43)});
+  }finally{Date.now=realNow;}
+  const cookie=headers.get('Set-Cookie').split(';',1)[0];
+  assert.equal(await readOAuthFlow(new Request(origin,{headers:{Cookie:cookie}}),googleEnv),null);
+  const started=await startOAuth(),pair=cookiePair(started),[name,value]=pair.split('=');
+  const pieces=value.split('.');pieces[0]=(pieces[0][0]==='A'?'B':'A')+pieces[0].slice(1);
+  assert.equal(await readOAuthFlow(new Request(origin,{headers:{Cookie:name+'='+pieces.join('.')}}),googleEnv),null);
+});
+
+test('Google OAuth rejects bad origin, missing state, and mismatched state without exchanging a code',async()=>{
+  const badOrigin=new Request(origin+'/api/account/google/start',{method:'POST',headers:{Origin:'https://attacker.example'}});
+  assert.equal((await googleStart({request:badOrigin,env:googleEnv})).status,403);
+  let tokenCalls=0;
+  const missing=await withFetch(async()=>mockResponse({external:{google:true}}),()=>googleCallback({
+    request:requestAt('/api/account/google/callback?code=auth-code&state=missing'),env:googleEnv
+  }));
+  assert.match(missing.headers.get('Location'),/account-auth=google-error/);
+  const started=await startOAuth(),cookie=cookiePair(started);
+  const mismatch=await withFetch(async(url)=>{
+    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
+    tokenCalls++;return mockResponse({},400);
+  },()=>googleCallback({request:requestAt('/api/account/google/callback?code=auth-code&state=wrong','GET',{Cookie:cookie}),env:googleEnv}));
+  assert.match(mismatch.headers.get('Location'),/account-auth=google-error/);
+  assert.equal(tokenCalls,0);
+  const tampered=await startOAuth(),pair=cookiePair(tampered),[name,value]=pair.split('=');
+  const tamperedFlow=await readOAuthFlow(new Request(origin,{headers:{Cookie:pair}}),googleEnv);
+  const altered=value.slice(0,-1)+(value.endsWith('A')?'B':'A');
+  const wrongVerifier=await withFetch(async(url)=>{
+    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
+    tokenCalls++;return mockResponse({},400);
+  },()=>googleCallback({request:requestAt('/api/account/google/callback?code=auth-code&state='+
+    tamperedFlow.state,'GET',{Cookie:name+'='+altered}),env:googleEnv}));
+  assert.match(wrongVerifier.headers.get('Location'),/account-auth=google-error/);
+  assert.equal(tokenCalls,0);
+});
+
+test('Google OAuth callback exchanges PKCE server-side, sets protected app cookies, strips the code, and rejects replay',async()=>{
+  const started=await startOAuth();
+  const cookie=cookiePair(started);
+  const flow=await readOAuthFlow(new Request(origin,{headers:{Cookie:cookie}}),googleEnv);
+  let tokenCalls=0;
+  const stub=async(url,options)=>{
+    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
+    assert.match(String(url),/\/auth\/v1\/token\?grant_type=pkce$/);
+    const body=JSON.parse(options.body);
+    assert.equal(body.auth_code,'single-use-code');assert.equal(body.code_verifier,flow.verifier);
+    tokenCalls++;
+    if(tokenCalls>1)return mockResponse({msg:'code already used'},400);
+    return mockResponse({access_token:'supabase-access-token',refresh_token:'supabase-refresh-token',expires_in:3600,user:googleUser});
+  };
+  const callbackRequest=()=>requestAt('/api/account/google/callback?code=single-use-code&state='+flow.state,'GET',{Cookie:cookie});
+  const first=await withFetch(stub,()=>googleCallback({request:callbackRequest(),env:googleEnv}));
+  assert.equal(first.status,303);assert.match(first.headers.get('Location'),/account-auth=google-success/);
+  assert.doesNotMatch(first.headers.get('Location'),/single-use-code|access_token|refresh_token/);
+  const cookies=first.headers.getSetCookie?.()||[first.headers.get('Set-Cookie')||''];
+  const sessionCookies=cookies.filter(value=>value.includes('__Host-rihlati-access=')||value.includes('__Host-rihlati-refresh='));
+  assert.equal(sessionCookies.length,2);
+  for(const value of sessionCookies){assert.match(value,/HttpOnly/);assert.match(value,/Secure/);assert.match(value,/SameSite=Lax/);}
+  const replay=await withFetch(stub,()=>googleCallback({request:callbackRequest(),env:googleEnv}));
+  assert.match(replay.headers.get('Location'),/account-auth=google-error/);
+  assert.equal(tokenCalls,2);
+  assert.doesNotMatch(replay.headers.get('Set-Cookie')||'',/__Host-rihlati-access=/);
+});
+
+test('Google cancellation clears its temporary flow cookie without creating a session',async()=>{
+  const started=await startOAuth(),cookie=cookiePair(started);
+  const flow=await readOAuthFlow(new Request(origin,{headers:{Cookie:cookie}}),googleEnv);
+  const response=await withFetch(async(url)=>{
+    assert(String(url).endsWith('/auth/v1/settings'));
+    return mockResponse({external:{google:true}});
+  },()=>googleCallback({request:requestAt('/api/account/google/callback?error=access_denied&state='+flow.state,'GET',{Cookie:cookie}),env:googleEnv}));
+  assert.match(response.headers.get('Location'),/account-auth=google-cancelled/);
+  assert.match(response.headers.get('Set-Cookie'),/__Host-rihlati-oauth-flow=;.*Max-Age=0/);
+  const providerError=await withFetch(async()=>mockResponse({external:{google:true}}),()=>googleCallback({
+    request:requestAt('/api/account/google/callback?error=server_error&state='+flow.state,'GET',{Cookie:cookie}),env:googleEnv
+  }));
+  assert.match(providerError.headers.get('Location'),/account-auth=google-error/);
+});
+
+test('Google sessions use the existing refresh and logout endpoints and protected cookie attributes',async()=>{
+  const cookie='__Host-rihlati-access=expired; __Host-rihlati-refresh=refresh-value';
+  let refreshes=0,logouts=0;
+  const refresh=await withFetch(async(url,options)=>{
+    if(String(url).endsWith('/auth/v1/user'))return mockResponse({},401);
+    if(String(url).includes('/auth/v1/token?grant_type=refresh_token')){
+      refreshes++;assert.deepEqual(JSON.parse(options.body),{refresh_token:'refresh-value'});
+      return mockResponse({access_token:'new-access',refresh_token:'new-refresh',expires_in:3600,user:googleUser});
+    }
+    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
+    throw new Error('Unexpected refresh request: '+url);
+  },()=>accountGet({request:requestAt('/api/account','GET',{Cookie:cookie}),env:googleEnv}));
+  assert.equal(refreshes,1);
+  assert.equal((await refresh.json()).authenticated,true);
+  assert.match(refresh.headers.get('Set-Cookie')||'',/__Host-rihlati-access=new-access/);
+  const logout=await withFetch(async(url)=>{
+    if(String(url).endsWith('/auth/v1/user'))return mockResponse(googleUser);
+    if(String(url).endsWith('/auth/v1/logout')){logouts++;return new Response(null,{status:204});}
+    throw new Error('Unexpected logout request: '+url);
+  },()=>accountPost({request:request('','POST',{action:'logout'},origin,cookie),env:googleEnv}));
+  assert.equal(logouts,1);assert.equal(logout.status,200);
+  assert.match(logout.headers.get('Set-Cookie')||'',/__Host-rihlati-access=;.*Max-Age=0/);
+  assert.match(logout.headers.get('Set-Cookie')||'',/__Host-rihlati-oauth-flow=;.*Max-Age=0/);
+});
+
+test('Google sign-in UI is mobile-safe, flag-gated, and retains explicit onboarding and logout flows',()=>{
+  const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
+  const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
+  assert.match(client,/googleSignIn/);
+  assert.match(client,/المتابعة باستخدام Google/);
+  assert.match(client,/أو المتابعة بالبريد الإلكتروني/);
+  assert.match(client,/data-account-action="import-guest"/);
+  assert.match(client,/google-cancelled/);
+  assert.match(styles,/\.account-google-button\{[\s\S]*?width:100%/);
+  assert.match(styles,/@media\(max-width:600px\)[\s\S]*?\.account-google-button/);
 });
