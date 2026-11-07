@@ -43,10 +43,13 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
 
   function buttonView(){
     if(!button)return;
-    if(!available)button.textContent='حسابي · قريبًا';
-    else if(user)button.textContent=(user.displayName||'حسابي')+' · '+(inAccount()?statusText():'إكمال الإعداد');
-    else button.textContent='تسجيل الدخول / حساب جديد';
-    button.title=available?'إدارة الحساب والمزامنة':'حسابات المستخدمين غير مفعّلة بعد';
+    // Keep the compact account entry visible in the fixed top bar on all screen sizes.
+    button.textContent=!available?'حسابي':user?'حسابي':'تسجيل الدخول';
+    button.title=!available?'الحسابات غير متاحة حاليًا':
+      user?(inAccount()?'إدارة الحساب · '+statusText()+' · تسجيل الخروج':'إكمال إعداد الحساب أو تسجيل الخروج'):
+        'تسجيل الدخول باستخدام Google';
+    button.setAttribute('aria-label',button.title);
+    button.classList.toggle('is-signed-in',Boolean(user));
   }
   const hint=()=>{
     if(error)return '<p class="account-notice account-notice-error" role="alert">'+esc(error)+'</p>';
@@ -76,15 +79,11 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     const emailInput=htmlInput('email','البريد الإلكتروني','email','example@email.com','required autocomplete="email" value="'+esc(email)+'"');
     if(modal==='disabled')content='<p class="account-notice">ميزة الحسابات قيد الإعداد. الموقع شغّال حاليًا كضيف بدون ما يغيّر بياناتك.</p>';
     if(modal==='loading')content='<div class="account-form"><button type="button" class="primary account-submit" data-account-action="retry-state">حاول تحميل التقدم مجددًا</button><button type="button" class="account-logout" data-account-action="logout">أكمل كضيف · تسجيل الخروج</button></div>';
-    if(modal==='login')content=(googleSignIn
+    // Google-only public entry point for now. Keep email/password implementation
+    // available in code for a later, separately approved SMTP rollout.
+    if(modal==='login')content=googleSignIn
       ?'<form class="account-google-form" data-google-auth method="post" action="/api/account/google/start"><button type="submit" class="account-google-button" '+(busy?'disabled':'')+'>'+googleIcon()+'<span>'+(busy?'جاري تسجيل الدخول...':'المتابعة باستخدام Google')+'</span></button></form>'
-      :'<button type="button" class="account-google-button" disabled>'+googleIcon()+'<span>تسجيل الدخول باستخدام Google غير متاح حاليًا</span></button>')+
-      '<div class="account-auth-divider"><span>أو المتابعة بالبريد الإلكتروني</span></div>'+
-      '<form class="account-form" data-account-form="login">'+emailInput+
-      htmlInput('password','كلمة المرور','password','••••••••••••','required autocomplete="current-password"')+
-      captcha()+formButton('تسجيل الدخول')+'</form>'+
-      '<div class="account-links"><button type="button" data-account-action="signup">إنشاء حساب جديد</button>'+
-      '<button type="button" data-account-action="recover">نسيت كلمة المرور؟</button></div>';
+      :'<button type="button" class="account-google-button" disabled>'+googleIcon()+'<span>تسجيل الدخول باستخدام Google غير متاح حاليًا</span></button>';
     if(modal==='signup')content='<form class="account-form" data-account-form="signup">'+
       htmlInput('displayName','شو بتحب نناديك؟','text','اسمك الأول','required minlength="2" maxlength="50" autocomplete="name"')+
       emailInput+htmlInput('password','كلمة مرور قوية (12 حرفًا على الأقل)','password','••••••••••••',
@@ -131,7 +130,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       '<button type="button" class="secondary account-switch" data-account-action="switch-account">الخروج والدخول بحساب آخر</button>'+
       '<button type="button" class="account-logout" data-account-action="'+(pending||sending||blocked?'export-and-logout':'logout')+'">'+
       (pending||sending||blocked?'تنزيل نسخة احتياطية ثم الخروج':'تسجيل الخروج')+'</button></div></div>';
-    if(!registration&&modal==='login')content+='<p class="account-help">إنشاء الحسابات الجديدة غير متاح حتى إكمال إعدادات الأمان وإرسال البريد.</p>';
+
     return '<div class="account-overlay" data-account-close><section class="account-dialog" role="dialog" aria-modal="true" aria-label="'+title+'">'+
       '<div class="account-dialog-head"><div class="account-kicker">رِحلتي مع القرآن</div>'+
       '<button class="account-close" type="button" data-account-action="close" aria-label="إغلاق">×</button></div>'+
