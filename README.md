@@ -11,7 +11,7 @@ An Arabic, right-to-left Quran memorization and revision tracker. The app helps 
 - Recitation session history and planned teacher sessions.
 - Study goals, calendar, analytics, dark mode, and responsive Arabic RTL layouts.
 - JSON export/import for backup and restore.
-- Browser-local storage; no account or server database is required.
+- Guest mode keeps progress browser-local. Optional multi-user account support is implemented behind a secure configuration gate (Supabase Auth + Postgres RLS); public signup is not enabled until SMTP, Turnstile, and two-account QA are complete.
 
 ## Requirements
 
@@ -173,3 +173,15 @@ Tanzil Quran Text (Uthmani, Version 1.1), Copyright (C) 2007-2021 Tanzil Project
 المصحف بنمط ليلي قليل الوهج `#24342d` مع نص عربي واضح `#ede4cf` وإطار لتمييز الآية المختارة، وكذلك وضع إخفاء الآيات في الاختبار. وعند تغيير المظهر يتبدل لون شريط متصفح الهاتف ليلائم الواجهة. المحتوى المحلي وسجلات التقدم وتخطيطك لا تتغير عند تبديل المظهر.
 
 أضيفت اختبارات آلية للحد الأدنى لتباين WCAG AA للنصوص الأساسية والثانوية وألوان الحالات (4.5:1 على الأقل)، وAAA للنص القرآني (7:1 على الأقل)، مع فحص عدم تغيير لوحة الوضع الفاتح. قياسات التباين تغطي أزواج الألوان المحددة، ولا تُعد بديلًا عن اختبار بصري لجميع الشاشات والأجهزة.
+
+## حسابات المستخدمين (قيد التجهيز للإطلاق)
+
+بُني أساس متعدد المستخدمين على Cloudflare Pages Functions + Supabase Auth + PostgreSQL RLS، مع واجهة عربية لإنشاء حساب وتأكيد البريد واستعادة كلمة المرور، وإعداد خطة شخصية من الصفر أو نقل سجلات المتصفح **بإذن صريح**. جديد الموقع لا يرث سجلات مؤلف المشروع.
+
+حتى يتم إعداد Supabase، يواصل الموقع العمل كضيف بدون تغيير بيانات أي مستخدم. لا توجد مزامنة حقيقية بين الأجهزة في وضع الضيف، ولا يجوز تفعيل إنشاء حسابات عامة قبل اختبار البريد وتأمين RLS وCAPTCHA.
+
+- [خطة التنفيذ والمراحل](docs/MULTI_USER_PLAN.md)
+- [إعداد Supabase وإطلاق الحسابات بأمان](docs/SUPABASE_SETUP.md)
+- [مخطط SQL لحماية بيانات كل مستخدم](supabase/migrations/001_user_state.sql)
+
+لا تستعمل مفتاح `service_role` في API أو في المتصفح؛ وسياسات RLS تعتمد هوية المستخدم الموثّقة. حسابات المستخدمين لا تستخدم أية خدمات ذكاء اصطناعي.
