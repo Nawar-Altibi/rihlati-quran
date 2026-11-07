@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, design/compact-settings-modern-polish]
+    branches: [main, design/accessible-forest-dark-theme]
   pull_request:
     branches: [main]
 jobs:
