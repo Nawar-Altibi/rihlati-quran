@@ -31,3 +31,19 @@ export const makeInitialData = () => ({
     { id: crypto.randomUUID(), date: null, surah: 79, type:'جديد', performance:null, mistakes:{}, notes:'', feedback:'', result:'غير محدد', nextDate:'', factual:true, title:'سورة النازعات — سبق تسميعها للمعلّم' }
   ], tasks: [], activities: [], scheduledSessions: [], weeklyGoals: [], selectedDate: null, onboardingDone: true
 });
+
+
+/** An entirely fresh account: no personal records copied from the original author's demo. */
+export const makeNewUserData = (options={}) => {
+  const settings=structuredClone(DEFAULT_SETTINGS);
+  settings.simpleStage=['amma','tabarak','qad','baqarah'].includes(options.stage)?options.stage:'amma';
+  settings.dailyMinutes=Number.isInteger(options.dailyMinutes)&&options.dailyMinutes>=10&&options.dailyMinutes<=180
+    ?options.dailyMinutes:30;
+  settings.phases[0].title='جزء عمّ — خطتي الشخصية';
+  settings.phases[0].detail='اختر السور والآيات والمواعيد التي تناسب حفظك؛ لا نفترض أن لديك حفظًا سابقًا.';
+  return {
+    version:2,settings,studyPlan:[],units:[],revisions:[],attempts:[],sessions:[],
+    tasks:[],activities:[],quizAttempts:[],scheduledSessions:[],weeklyGoals:[],
+    selectedDate:null,onboardingDone:true
+  };
+};
