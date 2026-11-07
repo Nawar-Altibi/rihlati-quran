@@ -16,7 +16,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   const d = () => getData();
   const memo = createMemorizeUI({getData,persist,toast,openModal,render});
   const planner=createFlexiblePlanUI({getData,persist,toast,openModal,render,openReview:surahs=>openReview(surahs),
-    openMemorize:surah=>memo.open(surah),openRecitation:surahs=>openGroupPlan(true,surahs),openMushafSurah});
+    openMemorize:(surah,from,to)=>memo.open(surah,from,to),openRecitation:surahs=>openGroupPlan(true,surahs),openMushafSurah});
   const savedReview = n => d().activities.some(a => a.type === 'revision' && a.date === todayKey() && d().units.some(u => u.id === a.unitId && Number(u.surah) === n));
 
   function currentSurahRows(stage = getCurrentStage(d())) {
@@ -43,7 +43,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   function quranView() {
     const data = d(), stage = getCurrentStage(data), index = SIMPLE_STAGES.findIndex(s => s.id === stage.id);
     const visited = stage.surahs.filter(n => Boolean(getSurahUnit(data,n)?.lastReviewed)).length;
-    const phases = SIMPLE_STAGES.map((s,i) => '<div class="simple-phase-item ' + (i === index ? 'is-current' : '') + '"><span class="simple-phase-number">' + (i+1) + '</span><div><b>' + esc(s.title) + '</b><small>' + esc(s.description) + '</small></div><span>' + (i < index ? 'تم الانتقال' : i === index ? 'الحالية' : 'لاحقًا') + '</span></div>').join('');
+    const phases = SIMPLE_STAGES.map((s,i) => '<div class="simple-phase-item ' + (i === index ? 'is-current' : '') + '"><span class="simple-phase-number">' + (i+1) + '</span><div><b>' + esc(s.title) + '</b><small>' + esc(s.description) + '</small></div><span>' + (i < index ? 'سابقة في الترتيب' : i === index ? 'تركيزي الحالي' : 'لاحقًا') + '</span></div>').join('');
     return '<header class="simple-page-heading"><div><div class="simple-kicker">رحلتك مع القرآن</div><h1>خطة القرآن</h1><p>خطة مرنة لكل يوم؛ اختار أي سورة وبالوقت اللي بيناسبك.</p></div></header>' +
     planner.plan() + '<section class="simple-main-actions"><div class="simple-panel"><div class="simple-kicker">المرحلة الحالية</div><h2>' + esc(stage.title) + '</h2><p>' + esc(stage.description) + '</p><label class="journey-stage-choice">تركيز المرحلة <select class="select" id="simple-stage-choose">'+SIMPLE_STAGES.map(s=>'<option value="'+s.id+'"'+(s.id===stage.id?' selected':'')+'>'+esc(s.title)+'</option>').join('')+'</select></label><small>المرحلة مجرد تنظيم، والتغيير ما بيعني إتقان اللي قبلها.</small><div class="simple-track"><span style="width:' + Math.round(visited/Math.max(stage.surahs.length,1)*100) + '%"></span></div><small>' + visited + ' من ' + stage.surahs.length + ' سور لها مراجعة مقيّمة (لا يعني إتقانها جميعًا)</small><div class="simple-actions">' + btn('simple-review-open', 'سجّل مراجعة', 'primary') + (stage.newMemorization ? btn('simple-memorize', 'سجّل حفظًا جديدًا', 'secondary') : '') + '</div></div><div class="simple-panel"><h2>مراحل الرحلة</h2>' + phases + '' + '</div></section>' +
     '<section class="simple-panel simple-surah-panel"><div class="simple-panel-heading"><h2>سور ' + esc(stage.title) + '</h2><span>راجع كل سورة عندما يناسبك</span></div><div class="simple-surah-grid">' + currentSurahRows(stage) + '</div></section>';
