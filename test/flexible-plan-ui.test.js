@@ -75,4 +75,5 @@ test('editing an actual planned ayah range pre-fills a form rather than full Sur
   assert.equal(fields.title,'تعديل الورد');
   assert.match(fields.html,/name="toAyah"[^>]*value="8"/);
   assert.match(fields.html,/option value="36" selected/);
+  assert.match(fields.html,/id="journey-surah-search"/);
 });
