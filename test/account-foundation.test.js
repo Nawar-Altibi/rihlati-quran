@@ -10,7 +10,8 @@ const env={
   SUPABASE_URL:'https://project-abc.supabase.co',
   SUPABASE_PUBLISHABLE_KEY:'sb_publishable_testtesttesttesttesttesttesttest',
   ACCOUNTS_ENABLED:'true',ACCOUNT_REGISTRATION_ENABLED:'true',
-  TURNSTILE_SITE_KEY:'test-sitekey-abcdefghijkl',TURNSTILE_SECRET_KEY:'test-secret-abcdefghijkl'
+  TURNSTILE_SITE_KEY:'test-sitekey-abcdefghijkl',TURNSTILE_SECRET_KEY:'test-secret-abcdefghijkl',
+  AUTH_FLOW_SECRET:'test-signing-key-should-have-more-than-32-characters-2026'
 };
 const id='11111111-2222-3333-4444-555555555555';
 const user={id,email:'person@example.com',email_confirmed_at:'2026-11-07T06:00:00Z',user_metadata:{display_name:'الضيف'}};
@@ -143,4 +144,16 @@ test('account client is isolated from guest localStorage and prompts explicit im
   assert.match(client,/expectedRevision:revision/);
   assert.match(client,/revision=result\.revision/);
   assert.doesNotMatch(client,/localStorage\.setItem/);
+});
+
+test('normal signed-in browser cannot set a new password without a verified recovery OTP',async()=>{
+  const stub=async(url)=>{
+    if(String(url).endsWith('/auth/v1/user'))return mockResponse(user);
+    throw Error('password update reached Supabase without OTP: '+url);
+  };
+  const r=await withFetch(stub,async()=>accountPost({request:request('','POST',
+    {action:'set-password',password:'a-valid-new-password-123'},origin,
+    '__Host-rihlati-access=mock-token'),env}));
+  assert.equal(r.status,403);
+  assert.match((await r.json()).error,/رمز الاستعادة/);
 });
