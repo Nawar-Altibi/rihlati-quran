@@ -33,7 +33,7 @@ const counts=doc=>({
 export function createAccountClient({getData,setData,guestData,restoreGuest,toast}){
   let available=false,registration=false,siteKey=null,mode='guest',user=null,revision=0;
   let modal='',email='',purpose='email',busy=false,error='',sending=false,pending=null,blocked=false;
-  let pendingRecovery=null,captchaToken='',turnstileWidgetId=null;
+  let pendingRecovery=null,captchaToken='',turnstileWidgetId=null,resendUntil=0,resendInterval=null;
   const button=document.getElementById('account-entry');
   const root=document.getElementById('account-root');
   const escUser=()=>esc(user?.displayName||user?.email||'حسابي');
@@ -64,8 +64,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     const intro={
       login:'سجّل دخولك حتى تلاقي خطتك ومراجعاتك على أجهزتك.',
       signup:'كل شخص إله سجل حفظ ومراجعات وخطة مستقلة تمامًا.',
-      verify:'اكتب الرمز الذي وصل إلى بريدك. ما رح نسجّل أي إنجاز تلقائيًا.',
-      recover:'أرسلنا لك رمزًا إذا كان البريد مسجّلًا.',
+      verify:'اكتب الرمز إذا وصلك. يمكنك طلب رمز جديد بعد انتهاء مهلة الانتظار.',
+      recover:'اطلب رمزًا لاستعادة كلمة مرورك؛ لن نكشف ما إذا كان البريد مسجّلًا.',
       loading:'نتحقق من بيانات حسابك ونحمّل رحلتك بأمان.',
       setup:'كيف بتحب تبدأ؟ خطتك الجديدة لحالها، أو تنقل سجلات هالجهاز بإذنك.',
       dashboard:'تقدمك مرتبط بحسابك، وما في حدا تاني بيقدر يشوفه.'
@@ -92,7 +92,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     if(modal==='verify')content='<form class="account-form" data-account-form="verify">'+
       '<p class="account-mail-note">البريد: <b dir="ltr">'+esc(email)+'</b></p>'+
       htmlInput('code','رمز التحقق من البريد','text','000000','required pattern="[0-9]{6,8}" minlength="6" maxlength="8" inputmode="numeric" autocomplete="one-time-code"')+
-      formButton('تأكيد الرمز')+'</form><div class="account-links"><button type="button" data-account-action="login">العودة للدخول</button></div>';
+      formButton('تأكيد الرمز')+'</form>'+captcha()+'<div class="account-links"><button type="button" data-account-action="resend" '+(Date.now()<resendUntil?'disabled':'')+'>'+resendLabel()+'</button>'+
+      '<button type="button" data-account-action="login">العودة للدخول</button></div>';
     if(modal==='recover')content='<form class="account-form" data-account-form="recover">'+emailInput+captcha()+
       formButton('أرسل رمز الاستعادة')+'</form>'+
       '<div class="account-links"><button type="button" data-account-action="login">العودة لتسجيل الدخول</button></div>';
@@ -134,7 +135,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   function renderModal(){
     if(!root)return;
     root.innerHTML=modal?page():'';
-    if(['signup','login','recover'].includes(modal))void mountCaptcha();
+    if(['signup','login','recover','verify'].includes(modal))void mountCaptcha();
     const emailField=root.querySelector('[name="email"]');
     if(emailField&&email)emailField.value=email;
   }
@@ -163,6 +164,20 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     });
   }
   function open(next='login'){modal=available?next:'disabled';error='';renderModal();}
+  function resendLabel(){
+    const seconds=Math.max(0,Math.ceil((resendUntil-Date.now())/1000));
+    return seconds?`إعادة الإرسال بعد ${seconds} ثانية`:'إعادة إرسال الرمز';
+  }
+  function startResendCooldown(){
+    resendUntil=Date.now()+60000;
+    try{sessionStorage.setItem('rihlati-auth-resend-until',String(resendUntil));}catch{}
+    if(resendInterval)clearInterval(resendInterval);
+    resendInterval=setInterval(()=>{
+      const control=root?.querySelector('[data-account-action="resend"]');
+      if(control){control.disabled=Date.now()<resendUntil;control.textContent=resendLabel();}
+      if(Date.now()>=resendUntil){clearInterval(resendInterval);resendInterval=null;}
+    },1000);
+  }
   function close(){modal='';error='';root.innerHTML='';}
   function saveCopy(payload=getData()){
     const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
@@ -263,8 +278,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       email=payload.email||email;
       const result=await post(kind,payload.code?payload:{...payload,
         ...(kind==='verify'?{code:String(fd.get('code')||''),purpose}:{} )});
-      if(kind==='signup'){purpose='email';open('verify');toast('تحقق من بريدك للحصول على رمز التأكيد.');}
-      else if(kind==='recover'){purpose='recovery';open('verify');toast('إذا كان البريد موجودًا، رح يصلك رمز إعادة التعيين.');}
+      if(kind==='signup'){purpose='email';startResendCooldown();open('verify');toast('تم طلب إرسال رسالة التحقق. افحص بريدك ومجلد الرسائل غير المرغوب فيها.');}
+      else if(kind==='recover'){purpose='recovery';startResendCooldown();open('verify');toast('إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.');}
       else if(kind==='verify')await authenticatedSession(result,purpose==='recovery');
       else if(kind==='login')await authenticatedSession(result);
       else if(kind==='set-password'){await loadState();toast('تم تعديل كلمة المرور.');}
@@ -285,6 +300,21 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     if(action==='login'||action==='signup'||action==='recover'){
       if(action==='signup'&&!registration){error='إنشاء الحسابات غير مفعّل حتى إكمال حماية البريد والتحقق.';renderModal();return;}
       open(action);return;
+    }
+    if(action==='resend'){
+      if(Date.now()<resendUntil)return;
+      if(busy)return;
+      const verifiedCaptchaToken=captchaToken;
+      busy=true;error='';renderModal();
+      try{
+        const result=await post('resend',{email,purpose,captchaToken:verifiedCaptchaToken});
+        startResendCooldown();
+        toast(purpose==='recovery'
+          ?'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'
+          :'إذا كان الحساب غير مؤكّد، أرسلنا طلب رمز تحقق جديد.');
+      }catch(e){error=readableError(e);if(e.status===429)startResendCooldown();}
+      finally{busy=false;renderModal();}
+      return;
     }
     if(action==='import-guest'){
       const original=guestData();

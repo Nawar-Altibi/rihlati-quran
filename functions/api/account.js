@@ -11,12 +11,14 @@ const passwordValid=s=>typeof s==='string'&&s.length>=12&&s.length<=128;
 const codeValid=s=>typeof s==='string'&&/^\d{6,8}$/.test(s.trim());
 
 function errorMessage(res,action){
+  if(res.status>=500)return 'تعذر الاتصال بخدمة الحساب. حاول بعد قليل.';
   if(res.status===429)return 'تم الوصول لحد المحاولات مؤقتًا. جرّب بعد قليل.';
   if(action==='login')return 'البريد أو كلمة المرور غير صحيحة، أو البريد لم يُؤكّد بعد.';
   if(action==='verify')return 'رمز التحقق غير صحيح أو انتهت صلاحيته.';
   if(action==='set-password')return 'تعذر تحديث كلمة المرور. اطلب رمز استعادة جديدًا وحاول مرة ثانية.';
   return 'تعذرت العملية. راجع المدخلات وحاول مجددًا.';
 }
+const upstreamStatus=res=>res.status===429?429:res.status>=500?503:400;
 function requiredCaptcha(payload,settings){
   if(!settings.captchaSiteKey)return null;
   const token=payload.captchaToken;
@@ -56,7 +58,7 @@ export async function onRequestPost({request,env}){
       return json({authenticated:false,loggedOut:true},200,h);
     }
     if(!settings.enabled)return json({error:'ميزة الحسابات غير مفعّلة بعد.'},503);
-    if(!['signup','login','verify','recover','set-password'].includes(action))
+    if(!['signup','login','verify','recover','resend','set-password'].includes(action))
       return json({error:'العملية غير معروفة.'},400);
     if(action==='set-password'){
       if(!passwordValid(body.password))return json({error:'كلمة المرور لازم تكون 12 حرفًا على الأقل.'},400);
@@ -70,7 +72,7 @@ export async function onRequestPost({request,env}){
       const result=await supabase(env,'/auth/v1/user',{
         method:'PUT',headers:{Authorization:'Bearer '+session.token},body:{password:body.password}
       });
-      if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:400,session.headers);
+      if(!result.ok)return json({error:errorMessage(result,action)},upstreamStatus(result),session.headers);
       return json({ok:true,authenticated:true,user:publicUser(session.user)},200,session.headers);
     }
 
@@ -85,21 +87,31 @@ export async function onRequestPost({request,env}){
       const result=await supabase(env,'/auth/v1/signup',{
         method:'POST',body:{email,password:body.password,data:{display_name:name},...captcha}
       });
-      if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:400);
+      if(!result.ok)return json({error:errorMessage(result,action)},upstreamStatus(result));
       // Email verification must be ON in Supabase project; never adopt a
       // signup session immediately if owner misconfigures confirmation.
       return json({ok:true,verificationRequired:true,
         message:'أرسلنا رسالة تحقق إلى بريدك (إذا لم يكن الحساب مسجّلًا مسبقًا).'});
     }
     if(action==='recover'){
-      if(!settings.registrationEnabled)return json({error:'إعادة تعيين كلمة المرور غير مفعّلة بعد.'},403);
       const captcha=requiredCaptcha(body,settings);
-      const result=await supabase(env,'/auth/v1/recover',{
+      await supabase(env,'/auth/v1/recover',{
         method:'POST',body:{email,...captcha}
       });
+      // Keep status and copy identical for known/unknown email, throttling,
+      // and provider delivery errors. The UI must not claim delivery.
+      return json({message:'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'});
+    }
+    if(action==='resend'){
+      const captcha=requiredCaptcha(body,settings);
+      const purpose=body.purpose==='recovery'?'recovery':'email';
+      const result=purpose==='recovery'
+        ?await supabase(env,'/auth/v1/recover',{method:'POST',body:{email,...captcha}})
+        :await supabase(env,'/auth/v1/resend',{method:'POST',body:{type:'signup',email,...captcha}});
+      if(purpose==='recovery')return json({message:'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'});
       if(result.status===429)return json({error:errorMessage(result,action)},429);
-      // Avoid email enumeration whether the account exists or not.
-      return json({ok:true,message:'إذا كان البريد مسجّلًا، رح يصلك رمز إعادة التعيين.'});
+      if(!result.ok)return json({error:'تعذر طلب الرمز الآن. انتظر قليلًا ثم حاول مجددًا.'},upstreamStatus(result));
+      return json({ok:true,message:'إذا كان الحساب غير مؤكّد، أرسلنا طلب رمز تحقق جديد.'});
     }
     if(action==='verify'){
       if(!codeValid(body.code))return json({error:'اكتب رمز التحقق الموجود بالبريد.'},400);
@@ -107,7 +119,7 @@ export async function onRequestPost({request,env}){
       const result=await supabase(env,'/auth/v1/verify',{
         method:'POST',body:{email,token:body.code.trim(),type}
       });
-      if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:400);
+      if(!result.ok)return json({error:errorMessage(result,action)},upstreamStatus(result));
       const verified=await supabaseData(result);
       if(!verified?.access_token||!verified?.refresh_token||!verified?.user?.id||!verified?.user?.email_confirmed_at)
         return json({error:'لم تكتمل عملية التحقق. حاول تسجيل الدخول.'},400);
@@ -125,7 +137,7 @@ export async function onRequestPost({request,env}){
       const result=await supabase(env,'/auth/v1/token?grant_type=password',{
         method:'POST',body:{email,password:body.password,...captcha}
       });
-      if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:401);
+      if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:result.status>=500?503:401);
       const session=await supabaseData(result);
       if(!session?.user?.id||!session?.user?.email_confirmed_at)
         return json({error:'أكد بريدك الإلكتروني قبل تسجيل الدخول.'},403);

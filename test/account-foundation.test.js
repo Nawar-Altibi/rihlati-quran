@@ -247,6 +247,135 @@ test('password recovery endpoint rejects replay after the one-time proof is cons
   });
   assert.equal(updates,1);
 });
+
+test('signup OTP resend uses Supabase Auth, Turnstile, and a generic response',async()=>{
+  let sent;
+  const r=await withFetch(async(url,options)=>{
+    assert.match(String(url),/\/auth\/v1\/resend$/);
+    sent=JSON.parse(options.body);
+    return mockResponse({});
+  },async()=>accountPost({request:request('','POST',{action:'resend',email:'new@example.com',purpose:'email',
+    captchaToken:'test-captcha-token-long-enough'}),env}));
+  assert.equal(r.status,200);
+  assert.equal(sent.type,'signup');
+  assert.equal(sent.email,'new@example.com');
+  assert.equal(sent.gotrue_meta_security.captcha_token,'test-captcha-token-long-enough');
+  assert.match((await r.json()).message,/إذا كان الحساب غير مؤكّد/);
+});
+
+test('password recovery resend stays generic and sends through Supabase Auth',async()=>{
+  let sent;
+  const r=await withFetch(async(url,options)=>{
+    assert.match(String(url),/\/auth\/v1\/recover$/);
+    sent=JSON.parse(options.body);
+    return mockResponse({});
+  },async()=>accountPost({request:request('','POST',{action:'resend',email:'person@example.com',purpose:'recovery',
+    captchaToken:'test-captcha-token-long-enough'}),env}));
+  assert.equal(r.status,200);
+  assert.equal(sent.email,'person@example.com');
+  assert.equal(sent.gotrue_meta_security.captcha_token,'test-captcha-token-long-enough');
+  assert.match((await r.json()).message,/لا نستطيع تأكيد وصول الرسالة/);
+});
+
+test('password recovery remains available while public registration stays disabled',async()=>{
+  let called=false;
+  const closed={...env,ACCOUNT_REGISTRATION_ENABLED:'false'};
+  const r=await withFetch(async(url)=>{
+    called=true;assert.match(String(url),/\/auth\/v1\/recover$/);return mockResponse({});
+  },async()=>accountPost({request:request('','POST',{action:'recover',email:'person@example.com',
+    captchaToken:'test-captcha-token-long-enough'}),env:closed}));
+  assert.equal(called,true);
+  assert.equal(r.status,200);
+  assert.match((await r.json()).message,/لا نستطيع تأكيد وصول الرسالة/);
+});
+
+test('resend rejects requests without fresh CAPTCHA and upstream rate limits stay visible',async()=>{
+  let called=false;
+  const missingCaptcha=await withFetch(async()=>{called=true;return mockResponse({});},async()=>
+    accountPost({request:request('','POST',{action:'resend',email:'person@example.com',purpose:'email'}),env}));
+  assert.equal(missingCaptcha.status,400);
+  assert.equal(called,false);
+  const throttled=await withFetch(async()=>mockResponse({msg:'rate limit'},429),async()=>
+    accountPost({request:request('','POST',{action:'resend',email:'person@example.com',purpose:'email',
+      captchaToken:'test-captcha-token-long-enough'}),env}));
+  assert.equal(throttled.status,429);
+  assert.match((await throttled.json()).error,/حد المحاولات/);
+});
+
+test('password recovery hides provider failures without claiming the message was delivered',async()=>{
+  const payload={action:'recover',email:'person@example.com',captchaToken:'test-captcha-token-long-enough'};
+  const responseFor=async(mock)=>withFetch(async()=>mock,async()=>
+    accountPost({request:request('','POST',payload),env}));
+  const deliveredRequest=await responseFor(mockResponse({}));
+  const failedRequest=await responseFor(mockResponse({msg:'smtp unavailable'},500));
+  const rateLimitedRequest=await responseFor(mockResponse({msg:'rate limit'},429));
+  assert.equal(deliveredRequest.status,200);
+  assert.equal(failedRequest.status,deliveredRequest.status);
+  assert.equal(rateLimitedRequest.status,deliveredRequest.status);
+  const delivered=await deliveredRequest.json(),failed=await failedRequest.json(),limited=await rateLimitedRequest.json();
+  assert.deepEqual(failed,delivered);
+  assert.deepEqual(limited,delivered);
+  assert.doesNotMatch(delivered.message,/تم الإرسال|أرسلنا/);
+  assert.match(delivered.message,/لا نستطيع تأكيد وصول الرسالة/);
+});
+
+test('wrong or expired OTP returns a friendly error without creating an authenticated session',async()=>{
+  const r=await withFetch(async(url)=>{
+    assert.match(String(url),/\/auth\/v1\/verify$/);
+    return mockResponse({msg:'Token has expired or is invalid'},400);
+  },async()=>accountPost({request:request('','POST',{action:'verify',email:'person@example.com',code:'123456',purpose:'email'}),env}));
+  assert.equal(r.status,400);
+  assert.match((await r.json()).error,/غير صحيح أو انتهت صلاحيته/);
+  assert.equal(r.headers.has('Set-Cookie'),false);
+});
+
+test('a previously consumed OTP cannot create a second session',async()=>{
+  let consumed=false;
+  const stub=async(url)=>{
+    assert.match(String(url),/\/auth\/v1\/verify$/);
+    if(consumed)return mockResponse({msg:'Token has expired or is invalid'},400);
+    consumed=true;return mockResponse({access_token:'first-token',refresh_token:'first-refresh',expires_in:3600,user});
+  };
+  await withFetch(stub,async()=>{
+    const first=await accountPost({request:request('','POST',{action:'verify',email:user.email,code:'123456',purpose:'email'}),env});
+    assert.equal(first.status,200);
+    assert.equal(first.headers.has('Set-Cookie'),true);
+    const replay=await accountPost({request:request('','POST',{action:'verify',email:user.email,code:'123456',purpose:'email'}),env});
+    assert.equal(replay.status,400);
+    assert.match((await replay.json()).error,/غير صحيح أو انتهت صلاحيته/);
+    assert.equal(replay.headers.has('Set-Cookie'),false);
+  });
+});
+
+test('failed signup email request is surfaced instead of being reported as sent',async()=>{
+  const r=await withFetch(async()=>mockResponse({msg:'smtp unavailable'},500),async()=>
+    accountPost({request:request('','POST',{action:'signup',email:'new@example.com',password:'strong-passphrase-123',
+      displayName:'احمد',captchaToken:'test-captcha-token-long-enough'}),env}));
+  assert.equal(r.status,503);
+  const body=await r.json();
+  assert.equal(body.verificationRequired,undefined);
+  assert.match(body.error,/تعذر الاتصال بخدمة الحساب/);
+});
+
+test('OTP templates are Arabic RTL with token, expiry, privacy warning, and no external assets',()=>{
+  const confirm=readFileSync(new URL('../supabase/templates/confirm-signup.html',import.meta.url),'utf8');
+  const recovery=readFileSync(new URL('../supabase/templates/reset-password.html',import.meta.url),'utf8');
+  for(const template of [confirm,recovery]){
+    assert.match(template,/<html lang="ar" dir="rtl">/);
+    assert.match(template,/\{\{ \.Token \}\}/);
+    assert.match(template,/10 دقائق/);
+    assert.doesNotMatch(template,/<script\b|<img\b|https?:\/\//i);
+  }
+  assert.match(confirm,/لا تشارك هذا الرمز/);
+  assert.match(recovery,/إذا لم تطلب استعادة كلمة المرور/);
+});
+
+test('verification screen exposes OTP resend with a sixty-second cooldown',()=>{
+  const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
+  assert.match(client,/data-account-action="resend"/);
+  assert.match(client,/resendUntil=Date\.now\(\)\+60000/);
+  assert.match(client,/post\('resend',\{email,purpose,captchaToken:verifiedCaptchaToken\}\)/);
+});
 test('brand-new visitors never load the original author\'s old memorization seed',()=>{
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
   assert.match(app,/loadData\(localStorage,STORE,makeNewUserData,DEFAULT_SETTINGS\)/);
