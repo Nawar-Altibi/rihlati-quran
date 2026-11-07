@@ -1,5 +1,5 @@
 import {
-  accountConfig,originMatches,json,supabase,setOAuthFlow,clearOAuthFlow
+  accountConfig,originMatches,json,setOAuthFlow
 } from '../../../_lib/account.js';
 
 const encode64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -35,20 +35,8 @@ export async function onRequestPost({request,env}){
 
   const headers=new Headers();
   await setOAuthFlow(headers,env,{state,verifier});
-  try{
-    const result=await supabase(env,authorize.pathname+authorize.search,{
-      headers:{Accept:'text/html'},redirect:'manual'
-    });
-    const location=result.headers.get('Location');
-    let destination;
-    try{destination=new URL(location);}catch{}
-    if(result.status<300||result.status>=400||destination?.protocol!=='https:'||destination?.hostname!=='accounts.google.com'){
-      clearOAuthFlow(headers);
-      return redirectResponse(appRedirect(request,'google-error'),303,headers);
-    }
-    return redirectResponse(destination.href,303,headers);
-  }catch{
-    clearOAuthFlow(headers);
-    return redirectResponse(appRedirect(request,'google-error'),303,headers);
-  }
+  // The browser must visit Supabase first so it can retain its own OAuth
+  // state cookie. A server-side fetch would discard that cookie before the
+  // Supabase callback returns from Google.
+  return redirectResponse(authorize.href,303,headers);
 }

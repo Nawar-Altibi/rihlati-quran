@@ -59,7 +59,7 @@
 
 ## تكامل Google OAuth
 
-- Google OAuth يستخدم مزود Supabase Auth نفسه، دون Resend أو SMTP أو OTP بالبريد. Pages Function يبدأ Authorization Code مع PKCE ويستعمل `/auth/v1/token?grant_type=pkce` لتبادل الكود من الخادم.
+- Google OAuth يستخدم مزود Supabase Auth نفسه، دون Resend أو SMTP أو OTP بالبريد. Pages Function يضع cookie التطبيق ثم يوجّه المتصفح إلى Supabase Auth كي تحفظ الخدمة cookie الـstate الخاصة بها؛ callback يبادل الكود وPKCE verifier خادميًا عبر `/auth/v1/token?grant_type=pkce`.
 - Cookie `__Host-rihlati-oauth-flow` قصيرة العمر وموقّعة و`Secure; HttpOnly; SameSite=Lax` وتحمل `state` وverifier. callback يقارن state، يرفض أكواد الخطأ أو المعاد استخدامها، ثم يضع جلسة Supabase في كوكيز الجلسة الموجودة. لا يظهر session token في URL أو JavaScript أو `localStorage`.
 - زر **الخروج والدخول بحساب آخر** ينهي جلسة Supabase، يعيد وضع الضيف المحلي، ويفتح شاشة الدخول. طلب Google يضم `prompt=select_account` لإظهار مبدّل حسابات Google؛ إذا كانت تغييرات المستخدم غير مؤكدة، يلزم تصدير نسخة احتياطية قبل التبديل.
 - Supabase يتحقق من حالة OAuth مع Google. التطبيق يتحقق أيضًا من `state` المربوط بالـcookie ويرفض أي وجهة callback خارج مساره الثابت. النطاقات المطلوبة فقط `openid email profile`.
