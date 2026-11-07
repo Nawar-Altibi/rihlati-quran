@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {makeInitialData,DEFAULT_SETTINGS} from '../src/data.js';
+import {todayKey} from '../src/logic.js';
 import {migrateData} from '../src/storage.js';
 import {
   planEntries,savePlanEntry,movePlanEntry,removePlanEntry,startSuggestedPlan,
@@ -88,5 +89,12 @@ test('changing simple plan never marks seed Juz 29 or 30 as memorized',()=>{
   const d=base();startSuggestedPlan(d,'2026-11-07',ids());
   assert.equal(d.units.filter(u=>u.legacy).length,2);
   assert.equal(d.units.some(u=>Number(u.surah)>0),false);
+  assert.equal(d.revisions.length,0);
+});
+
+test('suggested plan defaults to today, without scheduling in the past or fabricating a review',()=>{
+  const d=base(),entries=startSuggestedPlan(d,undefined,ids());
+  assert.equal(entries.filter(x=>x.date===todayKey()).length,3);
+  assert.equal(d.activities.length,0);
   assert.equal(d.revisions.length,0);
 });
