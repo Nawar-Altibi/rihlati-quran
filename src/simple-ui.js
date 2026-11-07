@@ -4,6 +4,7 @@ import { SURAH_NAMES } from './data.js';
 import { normalizeArabicSearch } from './quran-metadata.js';
 import { createMemorizeUI } from './memorize-ui.js';
 import { quizSummary } from './quiz-core.js';
+import { createFlexiblePlanUI } from './flexible-plan-ui.js';
 
 const esc = text => String(text ?? '').replace(/[&<>"']/g, c => ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[c]));
 const fmt = day => day ? new Intl.DateTimeFormat('ar', { day:'numeric', month:'short' }).format(new Date(day + 'T12:00:00')) : 'غير محدد';
@@ -14,6 +15,8 @@ const btn = (action, label, klass = 'primary', id = '') => '<button class="' + k
 export function createSimpleUI({ getData, persist, toast, openModal, navigate, render, openMemorizeModal, openMushafSurah, openMushaf, startQuiz }) {
   const d = () => getData();
   const memo = createMemorizeUI({getData,persist,toast,openModal,render});
+  const planner=createFlexiblePlanUI({getData,persist,toast,openModal,render,openReview:surahs=>openReview(surahs),
+    openMemorize:(surah,from,to)=>memo.open(surah,from,to),openRecitation:surahs=>openGroupPlan(true,surahs),openMushafSurah});
   const savedReview = n => d().activities.some(a => a.type === 'revision' && a.date === todayKey() && d().units.some(u => u.id === a.unitId && Number(u.surah) === n));
 
   function currentSurahRows(stage = getCurrentStage(d())) {
@@ -33,16 +36,16 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     const suggested = activeSurahs[0] || stage.surahs[0];
     const dueHtml = due.length ? due.slice(0,5).map(r => '<div class="simple-due-row"><div><b>' + esc(r.title) + '</b><small>' + (r.dueDate < todayKey() ? 'متأخرة منذ ' : 'مستحقة ') + fmt(r.dueDate) + '</small></div>' + btn('simple-review-one', 'سجّل مراجعتها', 'secondary small-btn', String(data.units.find(u => u.id === r.unitId)?.surah || '')) + '</div>').join('') : '<p class="simple-muted">ما عندك مراجعات مجدولة مستحقة الآن. فيك تراجع أي سورة بدك ياها وتسجلها.</p>';
     return '<section class="simple-hero"><div><div class="simple-kicker">وردك اليوم · ' + fmt(todayKey()) + '</div><h1>السلام عليكم ورحمة الله وبركاته</h1><p>خطوة صغيرة كل يوم، وحفظ أثبت بإذن الله.</p><span class="simple-phase-tag">' + esc(stage.title) + '</span></div><div class="simple-hero-flower" aria-hidden="true">۞</div></section>' +
-    '<section class="simple-main-actions"><div class="simple-primary-card"><div class="simple-kicker">سجّل إنجازك بخطوة واحدة</div><h2>شو عملت اليوم؟</h2><p>اختار السور اللي راجعتها واحفظها سوا، حتى لو كانت مراجعة إضافية قبل موعدها.</p><div class="simple-actions">' + btn('simple-review-open', '✓ راجعت', 'primary') + btn('simple-memorize', '＋ حفظت', 'secondary') + btn('simple-teacher-now', '◉ سمّعت', 'secondary') + btn('simple-open-mushaf', '◈ افتح المصحف', 'secondary') + btn('simple-quiz-random', '⚡ اختبر حفظي', 'secondary') + '</div></div><div class="simple-side-card"><div class="simple-kicker">المرحلة الحالية</div><h3>' + esc(stage.title) + '</h3><p>' + esc(stage.description) + '</p>' + (suggested ? '<div class="simple-tip">مقترح للبدء: سورة ' + esc(surahName(suggested)) + '</div>' : '') + btn('simple-plan-link', 'افتح خطة القرآن', 'secondary small-btn') + '</div></section>' +
+    planner.today() + '<section class="simple-main-actions"><div class="simple-primary-card"><div class="simple-kicker">سجّل إنجازك بخطوة واحدة</div><h2>شو عملت اليوم؟</h2><p>اختار السور اللي راجعتها واحفظها سوا، حتى لو كانت مراجعة إضافية قبل موعدها.</p><div class="simple-actions">' + btn('simple-review-open', '✓ راجعت', 'primary') + btn('simple-memorize', '＋ حفظت', 'secondary') + btn('simple-teacher-now', '◉ سمّعت', 'secondary') + btn('simple-open-mushaf', '◈ افتح المصحف', 'secondary') + btn('simple-quiz-random', '⚡ اختبر حفظي', 'secondary') + '</div></div><div class="simple-side-card"><div class="simple-kicker">المرحلة الحالية</div><h3>' + esc(stage.title) + '</h3><p>' + esc(stage.description) + '</p>' + (suggested ? '<div class="simple-tip">ضمن المرحلة سورة ' + esc(surahName(suggested)) + '</div>' : '') + btn('simple-plan-link', 'افتح خطة القرآن', 'secondary small-btn') + '</div></section>' +
     '<section class="simple-overview"><div class="simple-panel"><h2>مراجعاتك المستحقة <span class="simple-count">' + due.length + '</span></h2>' + dueHtml + '</div><div class="simple-panel"><h2>تسميعك القادم</h2>' + (next ? '<p>موعد ' + fmt(next.date) + ' · ' + (next.surahs || [next.surah]).filter(Boolean).map(surahName).join('، ') + '</p>' : '<p class="simple-muted">لسه ما حددت جلسة تسميع. اختار يوم يناسبك وصاحبك.</p>') + btn('simple-teacher-schedule', 'جدولة تسميع', 'secondary small-btn') + '<div class="simple-today-count">أنشطة اليوم المسجلة: <b>' + activities.length + '</b></div></div></section>';
   }
 
   function quranView() {
     const data = d(), stage = getCurrentStage(data), index = SIMPLE_STAGES.findIndex(s => s.id === stage.id);
     const visited = stage.surahs.filter(n => Boolean(getSurahUnit(data,n)?.lastReviewed)).length;
-    const phases = SIMPLE_STAGES.map((s,i) => '<div class="simple-phase-item ' + (i === index ? 'is-current' : '') + '"><span class="simple-phase-number">' + (i+1) + '</span><div><b>' + esc(s.title) + '</b><small>' + esc(s.description) + '</small></div><span>' + (i < index ? 'تم الانتقال' : i === index ? 'الحالية' : 'لاحقًا') + '</span></div>').join('');
-    return '<header class="simple-page-heading"><div><div class="simple-kicker">رحلتك مع القرآن</div><h1>خطة القرآن</h1><p>المرحلة الحالية فقط، من غير تشتيت ببقية الأجزاء.</p></div></header>' +
-    '<section class="simple-main-actions"><div class="simple-panel"><div class="simple-kicker">المرحلة الحالية</div><h2>' + esc(stage.title) + '</h2><p>' + esc(stage.description) + '</p><div class="simple-track"><span style="width:' + Math.round(visited/Math.max(stage.surahs.length,1)*100) + '%"></span></div><small>' + visited + ' من ' + stage.surahs.length + ' سور لها مراجعة مقيّمة (لا يعني إتقانها جميعًا)</small><div class="simple-actions">' + btn('simple-review-open', 'سجّل مراجعة', 'primary') + (stage.newMemorization ? btn('simple-memorize', 'سجّل حفظًا جديدًا', 'secondary') : '') + '</div></div><div class="simple-panel"><h2>مراحل الرحلة</h2>' + phases + (index < SIMPLE_STAGES.length-1 ? btn('simple-stage-next', 'أنهيت المرحلة، انتقل للتالية', 'secondary small-btn') : '') + '</div></section>' +
+    const phases = SIMPLE_STAGES.map((s,i) => '<div class="simple-phase-item ' + (i === index ? 'is-current' : '') + '"><span class="simple-phase-number">' + (i+1) + '</span><div><b>' + esc(s.title) + '</b><small>' + esc(s.description) + '</small></div><span>' + (i < index ? 'سابقة في الترتيب' : i === index ? 'تركيزي الحالي' : 'لاحقًا') + '</span></div>').join('');
+    return '<header class="simple-page-heading"><div><div class="simple-kicker">رحلتك مع القرآن</div><h1>خطة القرآن</h1><p>خطة مرنة لكل يوم؛ اختار أي سورة وبالوقت اللي بيناسبك.</p></div></header>' +
+    planner.plan() + '<section class="simple-main-actions"><div class="simple-panel"><div class="simple-kicker">المرحلة الحالية</div><h2>' + esc(stage.title) + '</h2><p>' + esc(stage.description) + '</p><label class="journey-stage-choice">تركيز المرحلة <select class="select" id="simple-stage-choose">'+SIMPLE_STAGES.map(s=>'<option value="'+s.id+'"'+(s.id===stage.id?' selected':'')+'>'+esc(s.title)+'</option>').join('')+'</select></label><small>المرحلة مجرد تنظيم، والتغيير ما بيعني إتقان اللي قبلها.</small><div class="simple-track"><span style="width:' + Math.round(visited/Math.max(stage.surahs.length,1)*100) + '%"></span></div><small>' + visited + ' من ' + stage.surahs.length + ' سور لها مراجعة مقيّمة (لا يعني إتقانها جميعًا)</small><div class="simple-actions">' + btn('simple-review-open', 'سجّل مراجعة', 'primary') + (stage.newMemorization ? btn('simple-memorize', 'سجّل حفظًا جديدًا', 'secondary') : '') + '</div></div><div class="simple-panel"><h2>مراحل الرحلة</h2>' + phases + '' + '</div></section>' +
     '<section class="simple-panel simple-surah-panel"><div class="simple-panel-heading"><h2>سور ' + esc(stage.title) + '</h2><span>راجع كل سورة عندما يناسبك</span></div><div class="simple-surah-grid">' + currentSurahRows(stage) + '</div></section>';
   }
 
@@ -89,11 +92,11 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
       '<div class="simple-modal-hint">إذا تركت التقييم فارغًا، يُسجّل النشاط بدون احتساب إتقان أو جدولة مراجعة جديدة.</div>');
   }
 
-  function openGroupPlan(immediate = false) {
+  function openGroupPlan(immediate = false,preselected = []) {
     const stage=getCurrentStage(d()),previous=SIMPLE_STAGES.filter(s=>SIMPLE_STAGES.indexOf(s)<SIMPLE_STAGES.indexOf(stage)).flatMap(s=>s.surahs);
     const current=[...new Set([...stage.surahs,...previous])];
     const numbers=[...new Set([...current,...SURAH_NAMES.map(s=>s.number)])];
-    const labels=numbers.map(n=>'<label class="simple-select-chip" data-surah-number="'+n+'" data-current="'+(current.includes(n)?'1':'0')+'"' + (current.includes(n)?'':' hidden') + '><input type="checkbox" name="surahs" value="'+n+'"> سورة '+esc(surahName(n))+'</label>').join('');
+    const labels=numbers.map(n=>'<label class="simple-select-chip" data-surah-number="'+n+'" data-current="'+(current.includes(n)?'1':'0')+'"' + (current.includes(n)||preselected.includes(n)?'':' hidden') + '><input type="checkbox" name="surahs" value="'+n+'"'+(preselected.includes(n)?' checked':'')+'> سورة '+esc(surahName(n))+'</label>').join('');
     openModal(immediate?'تسجيل تسميع اليوم':'جدولة تسميع',
       '<input type="hidden" name="simpleGroupPlan" value="1"><input type="hidden" name="doneNow" value="'+(immediate?'1':'0')+'">'+
       '<div class="simple-modal-intro">اختر موعدك والسور التي ستسمّعها في جلسة واحدة.</div>'+
@@ -113,6 +116,8 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   }
 
   function handleAction(action, id) {
+    if(action==='journey-open-plan'){navigate('quran');return true;}
+    if(planner.action(action,id))return true;
     switch(action) {
       case 'simple-review-open': openReview(); return true;
       case 'simple-review-one': openReview([Number(id)]); return true;
@@ -135,6 +140,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
 
   function submit(form, fd) {
     if (memo.submit(fd)) return true;
+    if(planner.submit(fd))return true;
     if(fd.has('simpleDailyReview')) {
       const nums = fd.getAll('surahs').map(Number), ratings={}, notes={};
       for (const n of nums) { ratings[n]=String(fd.get('rating-'+n)||''); notes[n]=String(fd.get('notes')||''); }
@@ -173,7 +179,7 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
   }
 
   function modalInput(e) {
-    if(memo.onInput(e))return;
+    if(memo.onInput(e)||planner.input(e))return;
     const t=e.target;
     if(t.id==='simple-surah-search'||t.id==='simple-show-all'){
       const q=normalizeArabicSearch(document.querySelector('#simple-surah-search')?.value);
@@ -193,5 +199,13 @@ export function createSimpleUI({ getData, persist, toast, openModal, navigate, r
     }
   }
 
-  return { page: view => ({today:todayView, quran:quranView, sessions:sessionsView, progress:progressView}[view] || todayView)(), handleAction, submit, modalInput, openReview };
+  function handleChange(e) {
+    if(e.target.id!=='simple-stage-choose')return false;
+    const next=String(e.target.value);
+    if(!SIMPLE_STAGES.some(s=>s.id===next))return true;
+    d().settings.simpleStage=next;
+    if(persist()){render();toast('غيّرنا المرحلة بدون تسجيل إنجاز أو اعتبار القديمة مكتملة.');}
+    return true;
+  }
+  return {page:view=>({today:todayView,quran:quranView,sessions:sessionsView,progress:progressView}[view]||todayView)(),handleAction,handleChange,submit,modalInput,openReview};
 }

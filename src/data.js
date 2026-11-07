@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS = {
 };
 
 export const makeInitialData = () => ({
-  version: 2, settings: structuredClone(DEFAULT_SETTINGS), units: [
+  version: 2, settings: structuredClone(DEFAULT_SETTINGS), studyPlan:[], units: [
     { id: crypto.randomUUID(), title:'جزء عمّ — محفوظ سابقًا، يحتاج إلى تثبيت', pages:0, status:'محفوظ سابقًا ويحتاج مراجعة', juz:30, surah:null, stage:0, legacy:true },
     { id: crypto.randomUUID(), title:'جزء تبارك — محفوظ سابقًا، يحتاج إلى تثبيت', pages:0, status:'محفوظ سابقًا ويحتاج مراجعة', juz:29, surah:null, stage:0, legacy:true }
   ], revisions: [], attempts: [], sessions: [

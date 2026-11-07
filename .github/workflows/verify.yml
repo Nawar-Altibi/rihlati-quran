@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, chore/remove-ai-mentor-fix-sidebar-scroll]
+    branches: [main, feature/flexible-quran-journey-ux]
   pull_request:
     branches: [main]
 jobs:
@@ -17,6 +17,8 @@ jobs:
           node --check src/app.js
           node --check src/simple-flow.js
           node --check src/simple-ui.js
+          node --check src/flexible-plan.js
+          node --check src/flexible-plan-ui.js
           node --check src/mushaf-core.js
           node --check src/mushaf-ui.js
           node --check src/ayah-test.js

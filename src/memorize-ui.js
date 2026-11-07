@@ -38,17 +38,20 @@ export function createMemorizeUI({getData,persist,toast,openModal,render}) {
     to.innerHTML=verses(meta.ayahs,b);
     refreshSummary();
   }
-  function open() {
+  function open(preselected=null,preselectedFrom=null,preselectedTo=null) {
     const stage=getData().settings.simpleStage||'amma';
-    const initial=stage==='tabarak'?67:stage==='qad'?58:stage==='baqarah'?2:78;
+    const initial=SURAH_NAMES.some(s=>s.number===Number(preselected))?Number(preselected):(stage==='tabarak'?67:stage==='qad'?58:stage==='baqarah'?2:78);
     const count=SURAH_NAMES[initial-1].ayahs;
+    const from=Math.max(1,Math.min(count,Number(preselectedFrom)||1));
+    const to=Math.max(from,Math.min(count,Number(preselectedTo)||count));
+    const isPartial=from!==1||to!==count;
     openModal('سجّل حفظك الجديد','<input type="hidden" name="simpleMemorization" value="1">'+
       '<div class="simple-modal-intro">اختار السورة والآيات فقط. البرنامج يحدد الجزء والصفحات تلقائيًا. إذا كنت تثبّت محفوظًا قديمًا، استخدم زر «راجعت».</div>'+
       '<label class="field"><span>تاريخ الحفظ</span><input class="input" type="date" name="date" value="'+todayKey()+'" max="'+todayKey()+'" required></label>'+
       '<label class="field"><span>ابحث عن سورة بالاسم أو الرقم</span><input class="input" type="search" id="simple-mem-search" autocomplete="off" placeholder="مثال: المجادلة أو 58"></label>'+
       '<label class="field"><span>أو اختر السورة يدويًا من القائمة</span><select class="select" id="simple-mem-surah" name="surah" required>'+options(SURAH_NAMES,initial)+'</select></label>'+
-      '<div class="field"><span>ماذا حفظت؟</span><div class="simple-scope-row"><label><input type="radio" name="scope" value="full" checked> السورة كاملة</label><label><input type="radio" name="scope" value="range"> نطاق آيات</label></div></div>'+
-      '<div class="simple-ayah-range hidden" id="simple-ayah-fields"><label class="field"><span>من الآية</span><select class="select" name="fromAyah" id="simple-from-ayah">'+verses(count,1)+'</select></label><label class="field"><span>إلى الآية</span><select class="select" name="toAyah" id="simple-to-ayah">'+verses(count,count)+'</select></label></div>'+
+      '<div class="field"><span>ماذا حفظت؟</span><div class="simple-scope-row"><label><input type="radio" name="scope" value="full"'+(!isPartial?' checked':'')+'> السورة كاملة</label><label><input type="radio" name="scope" value="range"'+(isPartial?' checked':'')+'> نطاق آيات</label></div></div>'+
+      '<div class="simple-ayah-range'+(isPartial?'':' hidden')+'" id="simple-ayah-fields"><label class="field"><span>من الآية</span><select class="select" name="fromAyah" id="simple-from-ayah">'+verses(count,from)+'</select></label><label class="field"><span>إلى الآية</span><select class="select" name="toAyah" id="simple-to-ayah">'+verses(count,to)+'</select></label></div>'+
       '<div class="simple-auto-summary" id="simple-auto-summary" aria-live="polite"></div>'+
       '<label class="field"><span>ملاحظة (اختياري)</span><textarea class="textarea" name="note" rows="2"></textarea></label>'+
       '<div class="simple-modal-hint">بيانات مصحف المدينة 604 صفحة (حفص). نطاق الصفحات دقيق، أما مقدار الحفظ فهو تقدير تقريبي بناءً على توزيع الآيات.</div>');
