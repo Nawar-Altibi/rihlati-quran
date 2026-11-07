@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {accountConfig,originMatches,parseCookies} from '../functions/_lib/account.js';
+import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof} from '../functions/_lib/account.js';
 import {onRequestGet as accountGet,onRequestPost as accountPost} from '../functions/api/account.js';
 import {onRequestGet as stateGet,onRequestPut as statePut} from '../functions/api/account/state.js';
 import {makeInitialData,makeNewUserData} from '../src/data.js';
@@ -156,4 +156,21 @@ test('normal signed-in browser cannot set a new password without a verified reco
     '__Host-rihlati-access=mock-token'),env}));
   assert.equal(r.status,403);
   assert.match((await r.json()).error,/رمز الاستعادة/);
+});
+
+test('recovery proof is HMAC signed, expires and cannot be reused for another user',async()=>{
+  const h=new Headers();await setRecoveryProof(h,env,id);
+  const cookie=(h.get('Set-Cookie')||'').split(';')[0];
+  const req=new Request(origin+'/api/account',{headers:{Cookie:cookie}});
+  assert.equal(await hasRecoveryProof(req,env,id),true);
+  assert.equal(await hasRecoveryProof(req,env,'22222222-2222-2222-2222-222222222222'),false);
+  const forged=new Request(origin+'/api/account',{headers:{Cookie:'__Host-rihlati-recovery=1.1'}});
+  assert.equal(await hasRecoveryProof(forged,env,id),false);
+  assert.equal(accountConfig({...env,AUTH_FLOW_SECRET:'short'}).enabled,false);
+});
+test('brand-new visitors never load the original author\'s old memorization seed',()=>{
+  const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+  assert.match(app,/loadData\(localStorage,STORE,makeNewUserData,DEFAULT_SETTINGS\)/);
+  assert.match(app,/const STORE='rihlati-quran-v1'/);
+  assert.doesNotMatch(app,/localStorage\.clear\(\)/);
 });
