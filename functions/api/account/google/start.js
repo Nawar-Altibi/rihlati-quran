@@ -24,7 +24,8 @@ export async function onRequestPost({request,env}){
   const state=randomValue(),verifier=randomValue();
   const challenge=encode64(new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(verifier))));
   const callback=new URL('/api/account/google/callback',request.url);
-  callback.searchParams.set('state',state);
+  // Avoid the OAuth provider's reserved `state` query parameter on app callbacks.
+  callback.searchParams.set('flow_id',state);
   const authorize=new URL('/auth/v1/authorize',env.SUPABASE_URL);
   authorize.searchParams.set('provider','google');
   authorize.searchParams.set('scopes','openid email profile');
