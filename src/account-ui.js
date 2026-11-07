@@ -105,7 +105,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
         '<div class="account-import-option"><h3>عندي تقدم على هالجهاز</h3>'+
         '<p>'+s.memorize+' حفظ، '+s.reviews+' مراجعة، '+s.planned+' أوراد مخططة، '+s.sessions+' جلسات تسميع.</p>'+
         '<button type="button" class="secondary" data-account-action="import-guest">أنقل سجلات هالجهاز لحسابي</button>'+
-        '<small>النقل اختياري وبموافقتك فقط. النسخة المحلية رح تبقى موجودة.</small></div></div>';
+        '<small>النقل اختياري وبموافقتك فقط. النسخة المحلية رح تبقى موجودة.</small></div>'+
+        '<button type="button" class="account-logout" data-account-action="logout">أكمل كضيف · تسجيل الخروج</button></div>';
     }
     if(modal==='dashboard')content='<div class="account-dashboard"><div class="account-user">'+
       '<span class="account-avatar">'+esc((user?.displayName||user?.email||'ق').trim()[0])+'</span>'+
