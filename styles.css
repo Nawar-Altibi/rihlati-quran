@@ -670,3 +670,13 @@ body.dark .settings-section-icon,body.dark .settings-disclosure-icon{color:#9bc4
 @media(prefers-reduced-motion:reduce){
   .settings-chevron,.settings-day-chip span,.card,.simple-panel{transition:none}
 }
+
+
+/* Vector detail alignment across daily plan, sidebar and top actions */
+.journey-entry-mark{color:var(--green2)}
+.journey-entry-mark svg{width:22px;height:22px}
+.journey-entry-actions button,.journey-today-header button,.journey-planner-cta button,
+.journey-today-footer button,.journey-start button{gap:7px}
+.journey-entry-actions button svg,.journey-today-header button svg,
+.journey-planner-cta button svg,.journey-today-footer button svg{width:16px;height:16px}
+.mobile-menu .ui-vector,.icon-button .ui-vector{margin:auto}
