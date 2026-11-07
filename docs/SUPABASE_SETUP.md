@@ -1,24 +1,24 @@
 # إعداد Supabase Auth والبريد لرِحلتي مع القرآن
 
-**حالة 2026-11-07:** قاعدة البيانات وBindings الخاصة بـPreview موجودة. أضيف تدفق Google OAuth برمجيًا، لكن مزود Google لم يُضبط بعد، و`GOOGLE_SIGNIN_ENABLED=false` افتراضيًا. إرسال البريد المخصص والتحقق الواقعي ما زالا معلقين. لا تفعّل التسجيل العام؛ `ACCOUNT_REGISTRATION_ENABLED=false` يظل كما هو.
+**حالة 2026-11-07:** مزود Google مفعّل في Supabase، وأصل Preview يقبل بدء التفويض ويرسل إلى Google. `GOOGLE_SIGNIN_ENABLED=true` مضبوط في Preview فقط؛ لم نكمل دخولًا بحساب Google أو اختبار الاستعادة وعزل الحسابات. Production كما هو، والتسجيل العام يبقى مغلقًا. إعداد SMTP والبريد المخصص ما زال معلقًا.
 
 ## ما تم التحقق منه
 
 - مشروع Supabase `xjalftonhiipohjophyv` بحالة `ACTIVE_HEALTHY` في `us-east-1`.
 - Migration `20261107085937_001_user_state` مطبقة. جدولا `public.user_state` و`public.account_recovery_proofs` موجودان مع RLS، كما هو موثق في PR #16.
 - مشروع Cloudflare Pages هو `rihlati-quran`. نطاقاته المخصصة فارغة؛ النطاق الوحيد هو `rihlati-quran.pages.dev`.
-- Preview bindings موجودة و`ACCOUNT_REGISTRATION_ENABLED=false`. إعدادات Production غير مضبوطة للحسابات ويجب أن تظل كذلك.
+- Preview bindings موجودة و`ACCOUNT_REGISTRATION_ENABLED=false`. `GOOGLE_SIGNIN_ENABLED=true` مضبوط في Preview فقط. إعدادات Production غير مضبوطة للحسابات ولم تتغير.
 - لا يوجد اتصال Resend في أدوات هذه الجلسة، ولا توفر وصلة Supabase الحالية تحرير إعدادات Auth/SMTP. لم يُنشأ API key أو يُفحص DNS أو يُرسل بريد حقيقي.
-- لا توجد وصلة Google Cloud لإدارة OAuth clients ولا تتيح وصلة Supabase الحالية تعديل إعدادات Auth. لذلك لم يُنشأ OAuth Client ID ولم تُرسل أسرار Google ولم يُفعّل مزود Google.
-- تكامل Google منفصل عن SMTP: لا يحتاج OAuth إلى Resend أو نطاق مرسل أو OTP بالبريد. `GOOGLE_SIGNIN_ENABLED` افتراضيًا مغلق، وواجهة الدخول لا تعرض زرًا فعالًا إلا عندما يكون العلم مفعّلًا ويعلن Supabase أن `external.google` مفعّل.
+- لا توجد وصلة لإدارة Google Cloud، ولم نقرأ Client Secret. تحققنا أن Supabase يعلن `external.google=true` وأن طلب التفويض بعنوان callback الخاص بـPreview يحوّل إلى `accounts.google.com`.
+- تكامل Google منفصل عن SMTP: لا يحتاج OAuth إلى Resend أو نطاق مرسل أو OTP بالبريد. `GOOGLE_SIGNIN_ENABLED` افتراضيًا مغلق؛ يعرض التطبيق الزر فقط عندما يكون العلم مفعّلًا ويؤكد Supabase توفر المزود من إعداداته أو من endpoint التفويض.
 
 ## إعداد Sign in with Google
 
-التدفق البرمجي جاهز خلف `GOOGLE_SIGNIN_ENABLED=false`. ينفذ Pages Function تدفق Authorization Code مع PKCE: ينشئ `state` و`code_verifier` عشوائيين، ويحفظهما موقّعين في cookie مؤقت `Secure; HttpOnly; SameSite=Lax` مدته عشر دقائق. Supabase يدير التحقق من حالة OAuth مع Google؛ عند العودة يتحقق التطبيق أيضًا من `state` والـcookie، ثم يرسل `code` و`code_verifier` إلى Supabase من الخادم. لا تظهر access/refresh tokens في الرابط أو JavaScript أو `localStorage`؛ تحفظ الجلسة في كوكيز HttpOnly الموجودة وتستخدمها عمليات التجديد والخروج الحالية. يُطلب فقط `openid email profile` ولا يُخزن Google provider token.
+ينفذ Pages Function تدفق Authorization Code مع PKCE: ينشئ `state` و`code_verifier` عشوائيين، ويحفظهما موقّعين في cookie مؤقت `Secure; HttpOnly; SameSite=Lax` مدته عشر دقائق. Supabase يدير التحقق من حالة OAuth مع Google؛ عند العودة يتحقق التطبيق أيضًا من `state` والـcookie، ثم يرسل `code` و`code_verifier` إلى Supabase من الخادم. لا تظهر access/refresh tokens في الرابط أو JavaScript أو `localStorage`؛ تحفظ الجلسة في كوكيز HttpOnly الموجودة وتستخدمها عمليات التجديد والخروج الحالية. يُطلب فقط `openid email profile` ولا يُخزن Google provider token.
 
 ### Google Cloud
 
-لا توجد وصلة Google Cloud في هذه الجلسة، لذلك لم تُنشأ موارد أو تُغيّر إعدادات. أكمل يدويًا في [Google Cloud Console](https://console.cloud.google.com/auth/overview):
+لا توجد وصلة لإدارة Google Cloud في هذه الجلسة؛ لم نفحص أو نغيّر مشروع OAuth هناك. أكمل يدويًا في [Google Cloud Console](https://console.cloud.google.com/auth/overview) إذا احتجت تعديل شاشة الموافقة أو حسابات الاختبار:
 
 1. اختر المشروع الصحيح أو أنشئ مشروعًا مخصصًا، وأكمل Branding/Consent Screen. لتطبيق External في وضع Testing أضف فقط حسابات Google الاختبارية المصرح بها.
 2. أنشئ OAuth Client من نوع **Web application**. استخدم URI الإرجاع الذي تعرضه لوحة Supabase ضمن إعداد Google provider. عنوان API الذي قرأناه من مشروع Supabase هو `https://xjalftonhiipohjophyv.supabase.co`؛ عادةً يظهر callback بالشكل `https://xjalftonhiipohjophyv.supabase.co/auth/v1/callback`. انسخ القيمة النهائية من لوحة المزود ولا تخمّنها أو تستبدلها بعنوان Pages.
@@ -32,9 +32,9 @@
    - `https://rihlati-quran.pages.dev/api/account/google/callback*`
    - Preview فقط: `https://feature-multiuser-auth-found.rihlati-quran.pages.dev/api/account/google/callback*`، أو استخدم اسم فرع Preview الحالي كما يظهر في Cloudflare.
    لا تستخدم `next`, `return_to` أو وجهة يحددها المستخدم؛ callback يحوّل دائمًا إلى الصفحة الرئيسية على نفس الأصل.
-3. في Cloudflare Pages اضبط `GOOGLE_SIGNIN_ENABLED=false` في Preview وProduction إلى أن تنجح مراجعة الإعداد. عند غياب المتغير يُغلق التكامل أيضًا. لا تغيّر `ACCOUNT_REGISTRATION_ENABLED`; يجب أن يبقى `false`. لا تحفظ Google Client Secret في Cloudflare؛ يبقى في إعداد مزود Supabase.
-4. بعد إدخال إعدادات المزود، تحقق من `Authentication → Sign In / Providers → Google` ومن أن Auth settings تعرض `external.google: true`. لا تفعّل العلم لمجرد وجود Client ID في Google.
-5. فعّل `GOOGLE_SIGNIN_ENABLED=true` على **Preview فقط** بعد اكتمال Redirect URLs، ثم اختبر حسابين مصرحًا بهما. يجب أن يبدأ حساب كل مستخدم برحلة خاصة فارغة وخيار استيراد الضيف الصريح، وأن يستعيد المستخدم العائد تقدمه من `user_state` دون استبداله. افحص حسابين وRLS من الخدمة الحية قبل التفكير في Production.
+3. `GOOGLE_SIGNIN_ENABLED` مغلق افتراضيًا. في Cloudflare Pages تم تفعيله في **Preview فقط** بعد تأكيد إعداد المزود وقبول callback؛ Production لم يتغير. لا تغيّر `ACCOUNT_REGISTRATION_ENABLED`; يجب أن يبقى `false`. لا تحفظ Google Client Secret في Cloudflare؛ يبقى في إعداد مزود Supabase.
+4. تحقق من `Authentication → Sign In / Providers → Google` ومن إعدادات Auth. إذا لم يعلن `/auth/v1/settings` أن `external.google=true`، يتحقق التطبيق من أن endpoint التفويض يحوّل إلى Google مع callback الدقيق للبيئة.
+5. بدأ Preview التفويض بنجاح وأعاد تحويلًا إلى `accounts.google.com` مع cookie التدفق المحمية. ما زال يلزم اختبار دخول بحسابين مصرحًا بهما، onboarding، الاستعادة، وعزل البيانات/RLS قبل أي قرار إنتاجي. يجب أن يبدأ كل حساب برحلة خاصة فارغة وخيار استيراد الضيف الصريح، وأن يستعيد المستخدم العائد تقدمه دون استبداله.
 6. إعادة العلم إلى `false` توقف زر Google. تبقى جلسات Supabase القائمة صالحة حتى تنتهي أو يُسجل المستخدم الخروج؛ أوقف جلسة الحساب من الواجهة عند التراجع إذا احتجت إنهاءها فورًا.
 
 ### ربط حساب بريد موجود
@@ -43,7 +43,7 @@
 
 ### استكشاف أعطال Google
 
-- `google-unavailable`: تحقق من العلم في بيئة Pages ومن ظهور `external.google: true` في Supabase Auth settings.
+- `google-unavailable`: تحقق من العلم في بيئة Pages. يجب أن يعلن Auth عن `external.google: true` أو أن يحوّل طلب التفويض للـcallback المحدد إلى `accounts.google.com`.
 - `redirect_uri_mismatch` في Google: انسخ URI الذي تعرضه لوحة Supabase كاملًا، مع HTTPS والمسار `/auth/v1/callback`، إلى Authorized redirect URIs في عميل Google.
 - رجوع التطبيق برسالة OAuth عامة: تحقق من Redirect URLs في Supabase لمضيف Pages الصحيح ومسار `/api/account/google/callback*`، ثم تحقق من تفعيل Google ومطابقة Client ID/Secret.
 - فشل PKCE/الحالة: أعد التدفق في المتصفح نفسه خلال عشر دقائق؛ لا تعِد فتح رابط callback أو تستخدم code سابقًا.
