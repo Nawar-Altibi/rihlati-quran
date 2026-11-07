@@ -125,13 +125,16 @@ async function flowKey(env){
   return crypto.subtle.importKey('raw',new TextEncoder().encode(env.AUTH_FLOW_SECRET),{name:'HMAC',hash:'SHA-256'},false,['sign','verify']);
 }
 export async function setRecoveryProof(headers,env,userId){
-  const payload=[userId,String(Date.now()+15*60000),crypto.randomUUID()].join('|');
+  const expiresAt=Date.now()+15*60000,nonce=crypto.randomUUID();
+  const payload=[userId,String(expiresAt),nonce].join('|');
   const bytes=new TextEncoder().encode(payload);
   const signature=await crypto.subtle.sign('HMAC',await flowKey(env),bytes);
   headers.append('Set-Cookie',RESET+'='+encode64(bytes)+'.'+encode64(new Uint8Array(signature))+
     '; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=900');
+  const nonceDigest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(nonce));
+  return {nonceHash:[...new Uint8Array(nonceDigest)].map(byte=>byte.toString(16).padStart(2,'0')).join(''),expiresAt};
 }
-export async function hasRecoveryProof(request,env,userId){
+export async function recoveryProofDetails(request,env,userId){
   const value=parseCookies(request)[RESET];
   if(!value||value.length>550||!value.includes('.'))return false;
   try{
@@ -140,8 +143,32 @@ export async function hasRecoveryProof(request,env,userId){
     const bytes=decode64(payload);
     const [owner,expiry,nonce]=new TextDecoder().decode(bytes).split('|');
     if(owner!==userId||!nonce||nonce.length<20||!Number.isSafeInteger(Number(expiry))||Number(expiry)<Date.now())return false;
-    return crypto.subtle.verify('HMAC',await flowKey(env),decode64(signature),bytes);
+    const valid=await crypto.subtle.verify('HMAC',await flowKey(env),decode64(signature),bytes);
+    if(!valid)return false;
+    const nonceDigest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(nonce));
+    return {nonceHash:[...new Uint8Array(nonceDigest)].map(byte=>byte.toString(16).padStart(2,'0')).join(''),expiresAt:Number(expiry)};
   }catch{return false;}
+}
+export async function hasRecoveryProof(request,env,userId){
+  return Boolean(await recoveryProofDetails(request,env,userId));
+}
+export async function storeRecoveryProof(env,session,proof){
+  const result=await supabase(env,'/rest/v1/account_recovery_proofs?on_conflict=user_id',{
+    method:'POST',headers:{Authorization:'Bearer '+session.access_token,
+      Prefer:'resolution=merge-duplicates,return=minimal'},
+    body:{user_id:session.user.id,nonce_hash:proof.nonceHash,expires_at:new Date(proof.expiresAt).toISOString()}
+  });
+  return result.ok;
+}
+export async function consumeRecoveryProof(request,env,userId,token){
+  const proof=await recoveryProofDetails(request,env,userId);
+  if(!proof)return false;
+  const result=await supabase(env,'/rest/v1/account_recovery_proofs?user_id=eq.'+userId+'&nonce_hash=eq.'+proof.nonceHash,{
+    method:'DELETE',headers:{Authorization:'Bearer '+token,Prefer:'return=representation'}
+  });
+  if(!result.ok)throw Object.assign(new Error('تعذر التحقق من صلاحية الاستعادة.'),{status:503});
+  const rows=await supabaseData(result);
+  return Array.isArray(rows)&&rows.length===1;
 }
 export function clearRecoveryProof(headers){
   headers.append('Set-Cookie',RESET+'=; HttpOnly; Secure; SameSite=Strict; Path=/; Max-Age=0');

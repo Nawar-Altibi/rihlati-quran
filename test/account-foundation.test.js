@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof} from '../functions/_lib/account.js';
+import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof,storeRecoveryProof,consumeRecoveryProof} from '../functions/_lib/account.js';
 import {onRequestGet as accountGet,onRequestPost as accountPost} from '../functions/api/account.js';
 import {onRequestGet as stateGet,onRequestPut as statePut} from '../functions/api/account/state.js';
 import {passwordsMatch} from '../src/account-ui.js';
@@ -135,6 +135,8 @@ test('Postgres table grants no anonymous reads and RLS protects every mutation',
   assert.match(sql,/for insert to authenticated/i);
   assert.match(sql,/for update to authenticated/i);
   assert.match(sql,/with check \(user_id = \(select auth\.uid\(\)\)\)/);
+  assert.match(sql,/create table if not exists public\.account_recovery_proofs/i);
+  assert.match(sql,/for delete to authenticated/i);
   assert.doesNotMatch(sql,/grant .* to anon;/i);
 });
 test('account client is isolated from guest localStorage and prompts explicit import',()=>{
@@ -185,6 +187,7 @@ test('normal signed-in browser cannot set a new password without a verified reco
 
 test('recovery proof is HMAC signed, expires and cannot be reused for another user',async()=>{
   const h=new Headers();await setRecoveryProof(h,env,id);
+  assert.match(h.get('Set-Cookie'),/Max-Age=900/);
   const cookie=(h.get('Set-Cookie')||'').split(';')[0];
   const req=new Request(origin+'/api/account',{headers:{Cookie:cookie}});
   assert.equal(await hasRecoveryProof(req,env,id),true);
@@ -192,6 +195,57 @@ test('recovery proof is HMAC signed, expires and cannot be reused for another us
   const forged=new Request(origin+'/api/account',{headers:{Cookie:'__Host-rihlati-recovery=1.1'}});
   assert.equal(await hasRecoveryProof(forged,env,id),false);
   assert.equal(accountConfig({...env,AUTH_FLOW_SECRET:'short'}).enabled,false);
+});
+
+test('recovery proof is stored for its owner and consumed atomically once',async()=>{
+  const headers=new Headers(),proof=await setRecoveryProof(headers,env,id);
+  const cookie=(headers.get('Set-Cookie')||'').split(';')[0];
+  const req=new Request(origin+'/api/account',{headers:{Cookie:cookie+'; __Host-rihlati-access=mock-token'}});
+  let stored=null,deleted=false;
+  const stub=async(url,options)=>{
+    if(String(url).includes('/rest/v1/account_recovery_proofs')&&options.method==='POST'){
+      stored=JSON.parse(options.body);
+      assert.equal(stored.user_id,id);
+      assert.equal(stored.nonce_hash,proof.nonceHash);
+      assert.equal(options.headers.get('Authorization'),'Bearer mock-recovery-token');
+      return new Response(null,{status:201});
+    }
+    if(String(url).includes('/rest/v1/account_recovery_proofs')&&options.method==='DELETE'){
+      if(deleted)return mockResponse([]);
+      deleted=true;return mockResponse([{user_id:id,nonce_hash:proof.nonceHash}]);
+    }
+    throw Error('unexpected URL '+url);
+  };
+  await withFetch(stub,async()=>{
+    assert.equal(await storeRecoveryProof(env,{user,access_token:'mock-recovery-token'},proof),true);
+    assert.equal(await consumeRecoveryProof(req,env,id,'mock-token'),true);
+    assert.equal(await consumeRecoveryProof(req,env,id,'mock-token'),false);
+  });
+  assert.ok(stored.expires_at);
+});
+
+test('password recovery endpoint rejects replay after the one-time proof is consumed',async()=>{
+  const headers=new Headers();await setRecoveryProof(headers,env,id);
+  const proofCookie=(headers.get('Set-Cookie')||'').split(';')[0];
+  const cookie='__Host-rihlati-access=mock-token; '+proofCookie;
+  let consumed=false,updates=0;
+  const stub=async(url,options={})=>{
+    if(String(url).endsWith('/auth/v1/user')&&options.method==='GET')return mockResponse(user);
+    if(String(url).endsWith('/auth/v1/user')&&options.method==='PUT'){updates++;return mockResponse(user);}
+    if(String(url).includes('/rest/v1/account_recovery_proofs')&&options.method==='DELETE'){
+      if(consumed)return mockResponse([]);
+      consumed=true;return mockResponse([{user_id:id}]);
+    }
+    throw Error('unexpected '+url);
+  };
+  const response=()=>request('','POST',{action:'set-password',password:'a-valid-new-password-123'},origin,cookie);
+  await withFetch(stub,async()=>{
+    const first=await accountPost({request:response(),env});
+    assert.equal(first.status,200);
+    const replay=await accountPost({request:response(),env});
+    assert.equal(replay.status,403);
+  });
+  assert.equal(updates,1);
 });
 test('brand-new visitors never load the original author\'s old memorization seed',()=>{
   const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
