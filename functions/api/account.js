@@ -1,6 +1,7 @@
 import {
   accountConfig,originMatches,json,readJson,fail,setSessionCookies,clearSessionCookies,
-  supabase,supabaseData,requireUser,publicUser,accountResponse
+  supabase,supabaseData,requireUser,publicUser,accountResponse,
+  hasRecoveryProof,setRecoveryProof,clearRecoveryProof
 } from '../_lib/account.js';
 
 const emailValid=s=>typeof s==='string'&&s.length<=254&&
@@ -61,10 +62,13 @@ export async function onRequestPost({request,env}){
       if(!passwordValid(body.password))return json({error:'كلمة المرور لازم تكون 12 حرفًا على الأقل.'},400);
       const session=await requireUser(request,env);
       if(!session.user)return json({error:'انتهت جلسة إعادة التعيين. اطلب رمزًا جديدًا.'},401,session.headers);
+      if(!(await hasRecoveryProof(request,env,session.user.id)))
+        return json({error:'لتغيير كلمة المرور لازم تأكيد رمز الاستعادة من البريد أولًا.'},403,session.headers);
       const result=await supabase(env,'/auth/v1/user',{
         method:'PUT',headers:{Authorization:'Bearer '+session.token},body:{password:body.password}
       });
       if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:400,session.headers);
+      clearRecoveryProof(session.headers);
       return json({ok:true,authenticated:true,user:publicUser(session.user)},200,session.headers);
     }
 
@@ -106,6 +110,7 @@ export async function onRequestPost({request,env}){
       if(!verified?.access_token||!verified?.refresh_token||!verified?.user?.id)
         return json({error:'لم تكتمل عملية التحقق. حاول تسجيل الدخول.'},400);
       const h=new Headers();setSessionCookies(h,verified);
+      if(type==='recovery')await setRecoveryProof(h,env,verified.user.id);
       return json({authenticated:true,user:publicUser(verified.user),purpose:type},200,h);
     }
     if(action==='login'){
