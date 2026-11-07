@@ -680,3 +680,247 @@ body.dark .settings-section-icon,body.dark .settings-disclosure-icon{color:#9bc4
 .journey-entry-actions button svg,.journey-today-header button svg,
 .journey-planner-cta button svg,.journey-today-footer button svg{width:16px;height:16px}
 .mobile-menu .ui-vector,.icon-button .ui-vector{margin:auto}
+
+
+/* Night Forest — accessible, consistent dark theme.
+   Palette: deep pine background, elevated sage cards, ivory type and muted gold.
+   Scoped under body.dark: zero changes to the light theme or persisted Quran data. */
+body.dark{
+  color-scheme:dark;
+  --bg:#101a17;
+  --surface:#1a2923;
+  --surface2:#24372e;
+  --text:#eef4eb;
+  --muted:#b2c3b6;
+  --line:#395146;
+  --green:#a0dfb7;
+  --green2:#87d7a6;
+  --green-soft:#264636;
+  --gold:#e2c98d;
+  --gold-soft:#3b3427;
+  --red:#f0a09a;
+  --shadow:0 10px 32px #020d095c;
+  --shadow-hover:0 14px 40px #020d0973;
+  background:var(--bg);
+  color:var(--text);
+  accent-color:#86d3a0;
+}
+body.dark .main-area{
+  background:radial-gradient(ellipse at 5% 0%,#3b493920,transparent 53%),var(--bg);
+}
+body.dark .sidebar{background:#14221c;border-left-color:#35483d}
+body.dark .topbar{
+  background:#14221cf0;
+  border-bottom-color:var(--line);
+  backdrop-filter:blur(16px);
+}
+body.dark .brand{color:var(--text)}
+body.dark .brand-mark{background:#2a694b;color:#e8d4a3;box-shadow:0 9px 25px #010b0755}
+body.dark .brand-vector-frame::before{border-color:#e1c98c77}
+body.dark .nav-item{color:#c3d2c6}
+body.dark .nav-item .nav-icon{color:#a4d8b5}
+body.dark .nav-item:hover{background:#263d30;color:#f2f8f1}
+body.dark .nav-item.active{
+  color:#d4f7df;
+  background:#264434;
+  box-shadow:inset 3px 0 0 #95d9ab;
+}
+body.dark .nav-item.active .nav-icon{color:#b1ebc2}
+body.dark .advanced-nav summary{color:#c1d0c2}
+body.dark .advanced-nav summary:hover{color:#f0f5ed;background:var(--surface2)}
+body.dark .sidebar nav{scrollbar-color:#638875 transparent}
+body.dark .sidebar nav::-webkit-scrollbar-thumb{background:#638875}
+body.dark .nav-badge{background:var(--gold-soft);color:var(--gold);border:1px solid #856d4666}
+body.dark .profile-row{border-top-color:var(--line)}
+body.dark .avatar{background:var(--gold-soft);color:var(--gold)}
+body.dark .quote-mini{background:#213328;border:1px solid var(--line)}
+body.dark .quote-mini p{color:#e2e8d9}
+body.dark .quote-mini small,body.dark .profile-row small,body.dark .brand small{color:var(--muted)}
+body.dark .breadcrumb{color:var(--muted)}
+body.dark .breadcrumb b{color:var(--text)}
+body.dark .breadcrumb span{color:#8caa92}
+body.dark .icon-button{background:var(--surface2);border-color:var(--line);color:var(--green)}
+body.dark .icon-button:hover{background:var(--green-soft);border-color:#5a8b6b}
+body.dark .mobile-menu{color:var(--green)}
+
+/* Common surfaces: readable secondary text and clear boundaries. */
+body.dark .card,
+body.dark .simple-panel,
+body.dark .simple-side-card,
+body.dark .simple-primary-card,
+body.dark .journey-today,
+body.dark .journey-planner,
+body.dark .journey-entry,
+body.dark .settings-module,
+body.dark .settings-disclosure{
+  border-color:var(--line);
+  box-shadow:var(--shadow);
+}
+body.dark .card:hover,body.dark .simple-panel:hover,body.dark .journey-entry:hover{
+  border-color:#5c816b;
+  box-shadow:var(--shadow-hover);
+}
+body.dark .simple-primary-card{
+  background:linear-gradient(145deg,#1c3026,#244431);
+  border-color:#41694e;
+}
+body.dark .simple-surah:hover,
+body.dark .simple-phase-item.is-current{border-color:#639676}
+body.dark .simple-phase-item.is-current{background:#254331}
+body.dark .simple-surah,body.dark .simple-phase-item{background:var(--surface2)}
+body.dark .simple-tip,body.dark .simple-modal-hint,
+body.dark .simple-auto-summary,body.dark .summary-box{
+  background:var(--green-soft);
+  color:var(--text);
+  border-color:#446d52;
+}
+body.dark .simple-auto-summary h3{color:var(--green)}
+body.dark .simple-done,body.dark .simple-count{color:var(--green)}
+body.dark .simple-verse-mark,body.dark .simple-phase-number{color:var(--green)}
+body.dark .stat-icon{color:var(--green)}
+body.dark .stat-icon.gold{color:var(--gold)}
+body.dark .empty-state{border-color:var(--line);background:var(--surface)}
+body.dark .calendar-day:hover,body.dark .calendar-day.selected{border-color:var(--green2);box-shadow:0 0 0 2px #6acb9238}
+body.dark .calendar-day.muted-day{opacity:.64}
+body.dark .calendar-day.today{background:var(--green-soft);border-color:#5c8c68}
+body.dark .heat-cell{background:#24382e}
+body.dark .heat-cell[data-level="1"]{background:#305340}
+body.dark .heat-cell[data-level="2"]{background:#41775a}
+body.dark .heat-cell[data-level="3"]{background:#58a176}
+body.dark .heat-cell[data-level="4"]{background:#8dd6a5}
+body.dark .toast{background:#286444;color:#f5fff6;border:1px solid #58866a}
+
+/* Forms and primary actions need strong foreground-to-background contrast. */
+body.dark .input,body.dark .select,body.dark .textarea,
+body.dark input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="hidden"]),
+body.dark select,body.dark textarea{
+  color:var(--text);
+  background:#20332a;
+  border-color:#4b6656;
+}
+body.dark .input:focus,body.dark .select:focus,body.dark .textarea:focus,
+body.dark input:focus-visible,body.dark select:focus-visible,body.dark textarea:focus-visible{
+  border-color:#92d9a9;
+  outline:3px solid #98dfb638;
+  outline-offset:1px;
+  box-shadow:0 0 0 1px #8ada9a;
+}
+body.dark input::placeholder,body.dark textarea::placeholder{color:#b5c7b9;opacity:1}
+body.dark select option{background:#20332a;color:var(--text)}
+body.dark .primary{
+  background:#29744d;
+  color:#fff;
+  border-color:#4c9970;
+}
+body.dark .primary:hover:not(:disabled){background:#328659;border-color:#76c197}
+body.dark .secondary{
+  color:var(--text);
+  background:#23382d;
+  border-color:#506c59;
+}
+body.dark .secondary:hover:not(:disabled){background:#2b4637;border-color:#8bc49a}
+body.dark .danger{background:#4c302c;border-color:#88534d;color:#ffcbc2}
+body.dark .danger:hover:not(:disabled){background:#653832;border-color:#bc766c}
+body.dark .toggle{background:#415649;border:1px solid #617b68}
+body.dark .toggle:checked{background:#328459;border-color:#80c99b}
+body.dark input[type="checkbox"],body.dark input[type="radio"]{accent-color:#5db784}
+body.dark .rating-btn:hover{color:var(--green);border-color:var(--green2)}
+body.dark .modal{background:var(--surface);border:1px solid var(--line)}
+body.dark .modal-footer{background:var(--surface)}
+body.dark .modal-backdrop{background:#050d09df}
+
+/* Planning: muted sage status, readable gold for overdue, no bright light pills. */
+body.dark .journey-hero,body.dark .journey-guide{color:var(--text)}
+body.dark .journey-start{border-color:#607b61}
+body.dark .journey-today-metrics span,body.dark .journey-planner-metrics span{
+  border-color:var(--line);background:var(--surface2);color:var(--muted);
+}
+body.dark .journey-entry.is-done{background:#213d2e;border-color:#537a5b}
+body.dark .journey-pill.today{background:#2a5138;color:#c0efcb}
+body.dark .journey-pill.done{background:#294b35;color:#c3f2cf}
+body.dark .journey-pill.missed{background:#493b25;color:#f3d99d}
+body.dark .journey-carry{background:#403729;color:#f1dcae;border:1px solid #766041}
+body.dark .journey-guide{background:#203b2c;border-color:#4d7858}
+body.dark .journey-guide-grid article{background:var(--surface);border-color:var(--line)}
+body.dark .journey-mini-visual{background:linear-gradient(140deg,#253b2e,#1b3026)}
+body.dark .journey-mini-card.strong{background:#2c704c;color:#fff}
+body.dark .journey-mini-verse{color:var(--gold)}
+body.dark .journey-entry-mark{color:var(--green)}
+body.dark .journey-delete{color:var(--muted)}
+
+/* Settings: readable active chips and disclosure panels, coherent emerald/gold. */
+body.dark .settings-hero{background:linear-gradient(110deg,#143a2a,#1b5139 68%,#256348)}
+body.dark .settings-hero::before{background:radial-gradient(circle at 5% 80%,#e1c78d20,transparent 52%)}
+body.dark .settings-hero-chips span{background:#ffffff12;border-color:#ffffff35;color:#edf7ec}
+body.dark .settings-overline{color:var(--gold)}
+body.dark .settings-section-icon,body.dark .settings-disclosure-icon{
+  background:var(--green-soft);color:var(--green);border-color:#45674f;
+}
+body.dark .settings-module .input,body.dark .settings-module .select,
+body.dark .settings-module .textarea{background:#20332a;border-color:#4b6656;color:var(--text)}
+body.dark .settings-day-chip span{background:var(--surface2);color:var(--text);border-color:var(--line)}
+body.dark .settings-day-chip input:checked+span{
+  background:#30583b;color:#d8f6db;border-color:#83b18e;
+}
+body.dark .settings-day-chip:hover span{border-color:#8ab696}
+body.dark .settings-theme-row,body.dark .settings-phase-item,body.dark .settings-month-item{
+  background:var(--surface2);border-color:var(--line);
+}
+body.dark .settings-theme-mark{color:var(--green);background:var(--green-soft)}
+body.dark .settings-disclosure summary:hover{background:#263d31}
+body.dark .settings-disclosure[open] summary{border-bottom-color:var(--line)}
+body.dark .settings-phase-number{color:var(--green);background:var(--green-soft)}
+body.dark .settings-privacy svg{color:var(--gold)}
+body.dark .settings-backup-actions svg{color:var(--green)}
+body.dark .settings-danger-area{border-color:#80534d}
+body.dark .settings-danger-area .settings-disclosure-icon{color:var(--red);background:#412b2a}
+
+/* Mushaf: low-glare dark parchment, warm Arabic verses, unmistakable active ayah. */
+body.dark .mushaf-hero{background:linear-gradient(125deg,#173f2e,#246148);color:#f8fbf5}
+body.dark .mushaf-toolbar,body.dark .mushaf-page-controls,body.dark .mushaf-mode-bar,
+body.dark .mushaf-side-card{background:var(--surface);border-color:var(--line)}
+body.dark .mushaf-paper{
+  background:#24342d;
+  color:#ede4cf;
+  border-color:#485749;
+  box-shadow:0 14px 42px #030d0773;
+}
+body.dark .mushaf-page-top,body.dark .mushaf-page-foot{
+  color:#b6c7b4;border-color:#485749;
+}
+body.dark .mushaf-surah-heading{
+  color:#e2c98d;
+  border-color:#637354;
+}
+body.dark .mushaf-surah-heading small{color:#c8d2bc}
+body.dark .mushaf-verse,body.dark .mushaf-verse-text{color:#ede4cf}
+body.dark .mushaf-verse-number{color:#c8dfa9}
+body.dark .mushaf-verse:hover,body.dark .mushaf-verse:focus-visible{
+  background:#345040;outline-color:#95d9ab;
+}
+body.dark .mushaf-verse.selected{background:#385846}
+body.dark .mushaf-loading,body.dark .mushaf-error{color:var(--muted)}
+body.dark .mushaf-test-panel{background:#254432;border-color:#53795c}
+body.dark .mushaf-test-status b{color:#d6f4da}
+body.dark .mushaf-verses.is-test-mode .mushaf-verse{
+  background:#2b3e33;border-color:#50624e;color:#ede4cf;
+}
+body.dark .mushaf-verses.is-test-mode .mushaf-verse:hover{background:#345142}
+body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{
+  background:#355640;border:2px solid #a2d8a7;color:#f9f0de;
+}
+body.dark .mushaf-masked-verse{color:#b1c5a8}
+body.dark .mushaf-quiz-launch{background:var(--surface2);border-color:var(--line)}
+body.dark .mushaf-quiz-actions{border-top-color:var(--line)}
+body.dark .mushaf-side-card .mushaf-note{background:var(--surface2)}
+body.dark .mushaf-attribution a{color:var(--green)}
+
+/* Accessibility: keyboard users and low-motion users retain contrast & feedback. */
+body.dark button:focus-visible,body.dark a:focus-visible,body.dark summary:focus-visible,
+body.dark input:focus-visible,body.dark select:focus-visible,body.dark textarea:focus-visible{
+  outline-color:#bde6bf;
+}
+body.dark :disabled{cursor:not-allowed}
+@media(prefers-reduced-motion:reduce){
+  body.dark .sidebar,body.dark .settings-chevron,body.dark .journey-entry{transition:none}
+}
