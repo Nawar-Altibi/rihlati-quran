@@ -22,9 +22,10 @@ export async function onRequestGet({request,env}){
 
   const params=new URL(request.url).searchParams;
   const flow=await readOAuthFlow(request,env);
-  const returnedState=params.get('state')||'';
-  if(!flow||!returnedState||flow.state!==returnedState){
-    clearFlow();return redirectResponse(request,'google-error',headers);
+  // The provider can use its own `state`; our signed flow identifier is separate.
+  const returnedFlowId=params.get('flow_id')||'';
+  if(!flow||!returnedFlowId||flow.state!==returnedFlowId){
+    clearFlow();return redirectResponse(request,'google-flow-error',headers);
   }
   clearFlow();
   const providerError=params.get('error')||params.get('error_code')||'';
