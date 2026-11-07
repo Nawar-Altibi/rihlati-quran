@@ -1,5 +1,5 @@
 import {
-  accountConfig,json,supabase,supabaseData,setSessionCookies,readOAuthFlow,clearOAuthFlow,googleProviderReady
+  accountConfig,json,supabase,supabaseData,setSessionCookies,readOAuthFlow,clearOAuthFlow
 } from '../../../_lib/account.js';
 
 const redirectResponse=(request,status,headers=new Headers())=>{
@@ -16,7 +16,7 @@ export async function onRequestGet({request,env}){
   const settings=accountConfig(env);
   const headers=new Headers();
   const clearFlow=()=>clearOAuthFlow(headers);
-  if(!settings.googleSignInEnabled||!(await googleProviderReady(env))){
+  if(!settings.googleSignInEnabled){
     clearFlow();return redirectResponse(request,'google-unavailable',headers);
   }
 

@@ -1,5 +1,5 @@
 import {
-  accountConfig,originMatches,json,supabase,googleProviderReady,setOAuthFlow,clearOAuthFlow
+  accountConfig,originMatches,json,supabase,setOAuthFlow,clearOAuthFlow
 } from '../../../_lib/account.js';
 
 const encode64=bytes=>btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
@@ -18,7 +18,7 @@ const appRedirect=(request,status)=>new URL('/?account-auth='+status,request.url
 
 export async function onRequestPost({request,env}){
   if(!originMatches(request))return json({error:'طلب من مصدر غير موثوق.'},403);
-  if(!accountConfig(env).googleSignInEnabled||!(await googleProviderReady(env)))
+  if(!accountConfig(env).googleSignInEnabled)
     return redirectResponse(appRedirect(request,'google-unavailable'));
 
   const state=randomValue(),verifier=randomValue();

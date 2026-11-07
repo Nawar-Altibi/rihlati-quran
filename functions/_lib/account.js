@@ -116,13 +116,39 @@ export async function supabase(env,path,options={}){
 export async function supabaseData(response){
   try{return await response.json()}catch{return {}}
 }
-export async function googleProviderReady(env){
+export async function googleProviderReady(env,request){
   if(!accountConfig(env).googleSignInEnabled)return false;
   try{
     const response=await supabase(env,'/auth/v1/settings');
-    if(!response.ok)return false;
-    const settings=await supabaseData(response);
-    return settings?.external?.google===true;
+    if(response.ok){
+      const settings=await supabaseData(response);
+      if(settings?.external?.google===true)return true;
+    }
+  }catch{ /* Fall through to the authorization endpoint check. */ }
+  // Some hosted Auth configurations do not expose the provider flag reliably
+  // through /settings. The authorize endpoint is the authoritative check and
+  // validates the exact Preview or production callback URL we will use.
+  if(!request)return false;
+  try{
+    const random=()=>encode64(crypto.getRandomValues(new Uint8Array(32)));
+    const verifier=random();
+    const challenge=encode64(new Uint8Array(await crypto.subtle.digest(
+      'SHA-256',new TextEncoder().encode(verifier)
+    )));
+    const callback=new URL('/api/account/google/callback',request.url);
+    callback.searchParams.set('state',random());
+    const authorize=new URL('/auth/v1/authorize',env.SUPABASE_URL);
+    authorize.searchParams.set('provider','google');
+    authorize.searchParams.set('scopes','openid email profile');
+    authorize.searchParams.set('redirect_to',callback.href);
+    authorize.searchParams.set('code_challenge',challenge);
+    authorize.searchParams.set('code_challenge_method','s256');
+    const response=await supabase(env,authorize.pathname+authorize.search,{
+      headers:{Accept:'text/html'},redirect:'manual'
+    });
+    const destination=new URL(response.headers.get('Location'));
+    return response.status>=300&&response.status<400&&destination.protocol==='https:'&&
+      destination.hostname==='accounts.google.com';
   }catch{return false;}
 }
 export async function requireUser(request,env){

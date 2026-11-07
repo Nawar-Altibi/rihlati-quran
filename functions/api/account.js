@@ -34,7 +34,7 @@ export async function onRequestGet({request,env}){
     const session=await requireUser(request,env);
     return accountResponse({
       enabled:true,registrationEnabled:settings.registrationEnabled,
-      googleSignInEnabled:await googleProviderReady(env),
+      googleSignInEnabled:await googleProviderReady(env,request),
       captchaSiteKey:settings.captchaSiteKey,authenticated:!!session.user,
       user:publicUser(session.user)
     },200,session.headers);

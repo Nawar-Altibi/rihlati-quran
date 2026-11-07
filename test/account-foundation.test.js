@@ -419,12 +419,25 @@ async function startOAuth(){
   },()=>googleStart({request:requestAt('/api/account/google/start','POST'),env:googleEnv}));
 }
 
-test('Google availability is independent of email registration and fails closed on provider settings',async()=>{
+test('Google availability is independent of email registration and fails closed when both provider checks fail',async()=>{
   assert.equal(accountConfig(googleEnv).registrationEnabled,false);
   assert.equal(accountConfig(googleEnv).googleSignInEnabled,true);
   assert.equal(accountConfig({...googleEnv,GOOGLE_SIGNIN_ENABLED:'false'}).googleSignInEnabled,false);
-  const response=await withFetch(async()=>mockResponse({external:{google:false}}),()=>accountGet({request:request(),env:googleEnv}));
+  const response=await withFetch(async(url)=>String(url).endsWith('/auth/v1/settings')
+    ?mockResponse({external:{google:false}})
+    :mockResponse({},400),()=>accountGet({request:request(),env:googleEnv}));
   assert.equal((await response.json()).googleSignInEnabled,false);
+});
+
+test('Google availability falls back to the authorization endpoint when provider settings are stale',async()=>{
+  const response=await withFetch(async(url)=>{
+    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:false}});
+    const authorize=new URL(String(url));
+    assert.equal(authorize.searchParams.get('provider'),'google');
+    assert.equal(new URL(authorize.searchParams.get('redirect_to')).pathname,'/api/account/google/callback');
+    return new Response(null,{status:302,headers:{Location:'https://accounts.google.com/o/oauth2/v2/auth'}});
+  },()=>accountGet({request:request(),env:googleEnv}));
+  assert.equal((await response.json()).googleSignInEnabled,true);
 });
 
 test('Google OAuth initiation uses a fixed callback, signed HttpOnly PKCE cookie, state, and Google-only scopes',async()=>{
