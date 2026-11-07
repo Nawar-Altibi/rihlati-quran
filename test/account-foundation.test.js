@@ -405,19 +405,8 @@ function requestAt(path,method='GET',headers={}){
 }
 function cookiePair(response){return response.headers.get('Set-Cookie')?.split(';',1)[0]||'';}
 async function startOAuth(){
-  return withFetch(async(url,options)=>{
-    if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
-    if(String(url).includes('/auth/v1/authorize?')){
-      assert.equal(options.redirect,'manual');
-      const authorize=new URL(String(url));
-      assert.equal(authorize.searchParams.get('provider'),'google');
-      assert.equal(authorize.searchParams.get('scopes'),'openid email profile');
-      assert.equal(authorize.searchParams.get('prompt'),'select_account');
-      assert.equal(authorize.searchParams.get('code_challenge_method'),'s256');
-      return new Response(null,{status:302,headers:{Location:'https://accounts.google.com/o/oauth2/v2/auth?client_id=public-test'}});
-    }
-    throw new Error('Unexpected OAuth request: '+url);
-  },()=>googleStart({request:requestAt('/api/account/google/start','POST'),env:googleEnv}));
+  return withFetch(async()=>{throw new Error('OAuth start must redirect the browser to Supabase');},
+    ()=>googleStart({request:requestAt('/api/account/google/start','POST'),env:googleEnv}));
 }
 
 test('Google availability is independent of email registration and fails closed when both provider checks fail',async()=>{
@@ -444,26 +433,27 @@ test('Google availability falls back to the authorization endpoint when provider
 test('Google OAuth initiation uses a fixed callback, signed HttpOnly PKCE cookie, state, and Google-only scopes',async()=>{
   const response=await startOAuth();
   assert.equal(response.status,303);
-  assert.match(response.headers.get('Location'),/^https:\/\/accounts\.google\.com\//);
+  const authorize=new URL(response.headers.get('Location'));
+  assert.equal(authorize.origin,'https://project-abc.supabase.co');
+  assert.equal(authorize.pathname,'/auth/v1/authorize');
+  assert.equal(authorize.searchParams.get('provider'),'google');
+  assert.equal(authorize.searchParams.get('scopes'),'openid email profile');
+  assert.equal(authorize.searchParams.get('prompt'),'select_account');
+  assert.equal(authorize.searchParams.get('code_challenge_method'),'s256');
   const cookie=response.headers.get('Set-Cookie');
   assert.match(cookie,/__Host-rihlati-oauth-flow=/);
   assert.match(cookie,/HttpOnly/);assert.match(cookie,/Secure/);assert.match(cookie,/SameSite=Lax/);assert.match(cookie,/Max-Age=600/);
   const value=cookiePair(response);
   const flow=await readOAuthFlow(new Request(origin,{headers:{Cookie:value}}),googleEnv);
   assert.ok(flow?.state);assert.equal(flow.verifier.length,43);
-  const second=await withFetch(async(url)=>{
-    const authorize=new URL(String(url));
-    const redirect=new URL(authorize.searchParams.get('redirect_to'));
-    assert.equal(redirect.origin,origin);
-    assert.equal(redirect.pathname,'/api/account/google/callback');
-    assert.equal(redirect.searchParams.get('flow_id'),flow.state);
-    assert.equal(redirect.searchParams.has('state'),false);
-    const challenge=authorize.searchParams.get('code_challenge');
-    const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(flow.verifier)));
-    assert.equal(challenge,btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''));
-    return new Response(null,{status:302,headers:{Location:'https://accounts.google.com/o/oauth2/v2/auth'}});
-  },()=>googleStart({request:requestAt('/api/account/google/start','POST'),env:googleEnv}));
-  assert.equal(second.status,303);
+  const redirect=new URL(authorize.searchParams.get('redirect_to'));
+  assert.equal(redirect.origin,origin);
+  assert.equal(redirect.pathname,'/api/account/google/callback');
+  assert.equal(redirect.searchParams.get('flow_id'),flow.state);
+  assert.equal(redirect.searchParams.has('state'),false);
+  const challenge=authorize.searchParams.get('code_challenge');
+  const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(flow.verifier)));
+  assert.equal(challenge,btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''));
 });
 
 test('Google OAuth flow cookie expires and cannot be forged by changing its signed payload',async()=>{
