@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, design/accessible-forest-dark-theme]
+    branches: [main, feature/multiuser-auth-foundation]
   pull_request:
     branches: [main]
 jobs:
@@ -15,6 +15,10 @@ jobs:
       - name: Syntax validation
         run: |
           node --check src/app.js
+          node --check src/account-ui.js
+          node --check functions/_lib/account.js
+          node --check functions/api/account.js
+          node --check functions/api/account/state.js
           node --check src/settings-ui.js
           node --check src/ui-icons.js
           node --check src/simple-flow.js
