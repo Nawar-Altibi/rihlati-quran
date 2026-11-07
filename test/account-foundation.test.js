@@ -456,7 +456,8 @@ test('Google OAuth initiation uses a fixed callback, signed HttpOnly PKCE cookie
     const redirect=new URL(authorize.searchParams.get('redirect_to'));
     assert.equal(redirect.origin,origin);
     assert.equal(redirect.pathname,'/api/account/google/callback');
-    assert.equal(redirect.searchParams.get('state'),flow.state);
+    assert.equal(redirect.searchParams.get('flow_id'),flow.state);
+    assert.equal(redirect.searchParams.has('state'),false);
     const challenge=authorize.searchParams.get('code_challenge');
     const bytes=new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(flow.verifier)));
     assert.equal(challenge,btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,''));
@@ -478,20 +479,20 @@ test('Google OAuth flow cookie expires and cannot be forged by changing its sign
   assert.equal(await readOAuthFlow(new Request(origin,{headers:{Cookie:name+'='+pieces.join('.')}}),googleEnv),null);
 });
 
-test('Google OAuth rejects bad origin, missing state, and mismatched state without exchanging a code',async()=>{
+test('Google OAuth rejects bad origin, missing flow_id, and mismatched flow_id without exchanging a code',async()=>{
   const badOrigin=new Request(origin+'/api/account/google/start',{method:'POST',headers:{Origin:'https://attacker.example'}});
   assert.equal((await googleStart({request:badOrigin,env:googleEnv})).status,403);
   let tokenCalls=0;
   const missing=await withFetch(async()=>mockResponse({external:{google:true}}),()=>googleCallback({
-    request:requestAt('/api/account/google/callback?code=auth-code&state=missing'),env:googleEnv
+    request:requestAt('/api/account/google/callback?code=auth-code&flow_id=missing'),env:googleEnv
   }));
-  assert.match(missing.headers.get('Location'),/account-auth=google-error/);
+  assert.match(missing.headers.get('Location'),/account-auth=google-flow-error/);
   const started=await startOAuth(),cookie=cookiePair(started);
   const mismatch=await withFetch(async(url)=>{
     if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
     tokenCalls++;return mockResponse({},400);
-  },()=>googleCallback({request:requestAt('/api/account/google/callback?code=auth-code&state=wrong','GET',{Cookie:cookie}),env:googleEnv}));
-  assert.match(mismatch.headers.get('Location'),/account-auth=google-error/);
+  },()=>googleCallback({request:requestAt('/api/account/google/callback?code=auth-code&flow_id=wrong','GET',{Cookie:cookie}),env:googleEnv}));
+  assert.match(mismatch.headers.get('Location'),/account-auth=google-flow-error/);
   assert.equal(tokenCalls,0);
   const tampered=await startOAuth(),pair=cookiePair(tampered),[name,value]=pair.split('=');
   const tamperedFlow=await readOAuthFlow(new Request(origin,{headers:{Cookie:pair}}),googleEnv);
@@ -499,9 +500,9 @@ test('Google OAuth rejects bad origin, missing state, and mismatched state witho
   const wrongVerifier=await withFetch(async(url)=>{
     if(String(url).endsWith('/auth/v1/settings'))return mockResponse({external:{google:true}});
     tokenCalls++;return mockResponse({},400);
-  },()=>googleCallback({request:requestAt('/api/account/google/callback?code=auth-code&state='+
+  },()=>googleCallback({request:requestAt('/api/account/google/callback?code=auth-code&flow_id='+
     tamperedFlow.state,'GET',{Cookie:name+'='+altered}),env:googleEnv}));
-  assert.match(wrongVerifier.headers.get('Location'),/account-auth=google-error/);
+  assert.match(wrongVerifier.headers.get('Location'),/account-auth=google-flow-error/);
   assert.equal(tokenCalls,0);
 });
 
@@ -519,7 +520,8 @@ test('Google OAuth callback exchanges PKCE server-side, sets protected app cooki
     if(tokenCalls>1)return mockResponse({msg:'code already used'},400);
     return mockResponse({access_token:'supabase-access-token',refresh_token:'supabase-refresh-token',expires_in:3600,user:googleUser});
   };
-  const callbackRequest=()=>requestAt('/api/account/google/callback?code=single-use-code&state='+flow.state,'GET',{Cookie:cookie});
+  // Supabase/Google may append a separate provider state parameter. It must not override ours.
+  const callbackRequest=()=>requestAt('/api/account/google/callback?code=single-use-code&flow_id='+flow.state+'&state=provider-reserved-value','GET',{Cookie:cookie});
   const first=await withFetch(stub,()=>googleCallback({request:callbackRequest(),env:googleEnv}));
   assert.equal(first.status,303);assert.match(first.headers.get('Location'),/account-auth=google-success/);
   assert.doesNotMatch(first.headers.get('Location'),/single-use-code|access_token|refresh_token/);
@@ -539,11 +541,11 @@ test('Google cancellation clears its temporary flow cookie without creating a se
   const response=await withFetch(async(url)=>{
     assert(String(url).endsWith('/auth/v1/settings'));
     return mockResponse({external:{google:true}});
-  },()=>googleCallback({request:requestAt('/api/account/google/callback?error=access_denied&state='+flow.state,'GET',{Cookie:cookie}),env:googleEnv}));
+  },()=>googleCallback({request:requestAt('/api/account/google/callback?error=access_denied&flow_id='+flow.state,'GET',{Cookie:cookie}),env:googleEnv}));
   assert.match(response.headers.get('Location'),/account-auth=google-cancelled/);
   assert.match(response.headers.get('Set-Cookie'),/__Host-rihlati-oauth-flow=;.*Max-Age=0/);
   const providerError=await withFetch(async()=>mockResponse({external:{google:true}}),()=>googleCallback({
-    request:requestAt('/api/account/google/callback?error=server_error&state='+flow.state,'GET',{Cookie:cookie}),env:googleEnv
+    request:requestAt('/api/account/google/callback?error=server_error&flow_id='+flow.state,'GET',{Cookie:cookie}),env:googleEnv
   }));
   assert.match(providerError.headers.get('Location'),/account-auth=google-error/);
 });
@@ -585,6 +587,7 @@ test('Google sign-in UI is mobile-safe, flag-gated, and retains explicit onboard
   assert.match(client,/if\(action==='logout'\|\|action==='export-and-logout'\|\|action==='switch-account'\)/);
   assert.match(client,/if\(switching\)\{busy=false;open\('login'\)/);
   assert.match(client,/google-cancelled/);
+  assert.match(client,/google-flow-error/);
   assert.match(googleStart,/authorize\.searchParams\.set\('prompt','select_account'\)/);
   assert.match(styles,/\.account-dashboard-actions \.account-switch\{grid-column:1\/-1\}/);
   assert.match(styles,/\.account-google-button\{[\s\S]*?width:100%/);
