@@ -1,4 +1,5 @@
 import { SURAH_NAMES } from './data.js';
+import { uiIcon } from './ui-icons.js';
 import { addDays, todayKey } from './logic.js';
 import { normalizeArabicSearch } from './quran-metadata.js';
 import {planEntries,savePlanEntry,movePlanEntry,removePlanEntry,startSuggestedPlan,planItemState,dailyPlanStats,surahLabel} from './flexible-plan.js';
@@ -8,7 +9,13 @@ const formatDate=day=>new Intl.DateTimeFormat('ar',{weekday:'long',day:'numeric'
 const kindName={review:'مراجعة',memorize:'حفظ جديد',recitation:'تسميع عند المعلّم'};
 const stateName={done:'تم تسجيل الإنجاز',today:'اليوم',upcoming:'قادم',missed:'فات موعده — قابل للترحيل'};
 const stateClass={done:'done',today:'today',upcoming:'upcoming',missed:'missed'};
-const B=(a,t,id='',cls='secondary small-btn')=>'<button type="button" class="'+cls+'" data-action="'+a+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+t+'</button>';
+const B=(a,t,id='',cls='secondary small-btn')=>{
+  const actionIcon={ 'journey-add':'plus','journey-guide':'info','journey-open-surah':'book',
+    'journey-log':'checkcircle','journey-tomorrow':'calendar','journey-edit':'settings',
+    'journey-remove':'trash','journey-open-plan':'plan','journey-template':'checkcircle'}[a];
+  return '<button type="button" class="'+cls+'" data-action="'+a+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+
+    (actionIcon?uiIcon(actionIcon,16):'')+t+'</button>';
+};
 
 export function createFlexiblePlanUI({getData,persist,render,toast,openModal,openReview,openMemorize,openRecitation,openMushafSurah}) {
   let guideOpen=false;
@@ -26,7 +33,7 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
       'السورة كاملة':'الآيات '+entry.fromAyah+'–'+entry.toAyah;
     const isDone=state==='done';
     return '<article class="journey-entry '+(isDone?'is-done':'')+'">'+
-      '<div class="journey-entry-mark" aria-hidden="true">'+(entry.kind==='review'?'◷':entry.kind==='memorize'?'✦':'◉')+'</div>'+
+      '<div class="journey-entry-mark" aria-hidden="true">'+uiIcon(entry.kind==='review'?'refresh':entry.kind==='memorize'?'book':'mic',22)+'</div>'+
       '<div class="journey-entry-body"><div class="journey-entry-head"><strong>سورة '+esc(surahLabel(entry.surah))+'</strong><span class="journey-pill '+stateClass[state]+'">'+stateName[state]+'</span></div>'+
       '<p>'+kindName[entry.kind]+' · '+range+' · '+entry.minutes+' دقيقة · '+formatDate(entry.date)+'</p>'+
       (entry.notes?'<small>'+esc(entry.notes)+'</small>':'')+

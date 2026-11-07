@@ -1,7 +1,7 @@
 name: Verify Quran App
 on:
   push:
-    branches: [main, feature/flexible-quran-journey-ux]
+    branches: [main, design/compact-settings-modern-polish]
   pull_request:
     branches: [main]
 jobs:
@@ -15,6 +15,8 @@ jobs:
       - name: Syntax validation
         run: |
           node --check src/app.js
+          node --check src/settings-ui.js
+          node --check src/ui-icons.js
           node --check src/simple-flow.js
           node --check src/simple-ui.js
           node --check src/flexible-plan.js
