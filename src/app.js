@@ -5,17 +5,18 @@ import { createSimpleUI } from './simple-ui.js';
 import { createMushafUI } from './mushaf-ui.js';
 import { renderSettingsUI } from './settings-ui.js';
 import { applySidebarVectors } from './ui-icons.js';
+import { createAccountClient } from './account-ui.js';
 
 const STORE='rihlati-quran-v1';
 const saved=loadData(localStorage,STORE,makeInitialData,DEFAULT_SETTINGS);
 let data=saved.data||makeInitialData(), storageLocked=Boolean(saved.error);
-let simpleUI, mushafUI;
+let simpleUI, mushafUI, accountClient=null;
 let currentView='today', selectedJuz=null, calendarMonth=new Date(), selectedDay=todayKey(), sessionSurahFilter='all';
 const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const surah=n=>SURAH_NAMES.find(s=>s.number===Number(n));
 const name=n=>surah(n)?.name||'—';
-const persist=()=>{if(storageLocked){toast('البيانات المحفوظة غير صالحة للقراءة؛ لم نكتب فوقها. استورد نسخة سليمة أو أعد الضبط يدويًا.');return false;}try{localStorage.setItem(STORE,JSON.stringify(data));updateDueBadge();return true;}catch{toast('تعذر حفظ التغيير على هذا الجهاز. صدّر نسخة احتياطية وتحقق من مساحة المتصفح.');return false;}};
+const persist=()=>{if(accountClient?.isAccount())return accountClient.save(data);if(storageLocked){toast('البيانات المحفوظة غير صالحة للقراءة؛ لم نكتب فوقها. استورد نسخة سليمة أو أعد الضبط يدويًا.');return false;}try{localStorage.setItem(STORE,JSON.stringify(data));updateDueBadge();return true;}catch{toast('تعذر حفظ التغيير على هذا الجهاز. صدّر نسخة احتياطية وتحقق من مساحة المتصفح.');return false;}};
 const formatDate=(k,options={day:'numeric',month:'long',year:'numeric'})=>k?new Intl.DateTimeFormat('ar',{...options}).format(new Date(`${k}T12:00:00`)):'غير محدد';
 const pageTitle={mushaf:'المصحف',today:'اليوم',quran:'خطة القرآن',progress:'تقدمي',dashboard:'لوحة التحكم',memorize:'متابعة الحفظ',revision:'المراجعة الذكية',sessions:'التسميع',plan:'خطة الحفظ',calendar:'التقويم',analytics:'الإحصائيات',settings:'الإعدادات'};
 function baselineUnits(){return data.units.filter(u=>u.status==='محفوظ سابقًا ويحتاج مراجعة'&&!data.revisions.some(r=>r.unitId===u.id&&!r.done));}
@@ -206,3 +207,16 @@ mushafUI=createMushafUI({getData:()=>data,persist,toast,render,navigate,openRevi
 simpleUI=createSimpleUI({getData:()=>data,persist,toast,openModal,navigate,render,openMemorizeModal,openMushafSurah:n=>mushafUI.goToSurah(n),openMushaf:()=>navigate('mushaf'),startQuiz:mode=>mushafUI.startRandomQuiz(mode)});
 setupShell();
 applySidebarVectors();
+// Auth is optional until Supabase, mail and RLS are correctly provisioned.
+// Guest progress is never uploaded without the user's explicit decision.
+accountClient=createAccountClient({
+  getData:()=>data,
+  setData:next=>{data=next;storageLocked=false;applyThemeAppearance(data.settings.theme==='dark');navigate('today');},
+  guestData:()=>{const result=loadData(localStorage,STORE,makeInitialData,DEFAULT_SETTINGS);return result.error?null:result.data;},
+  restoreGuest:()=>{
+    const result=loadData(localStorage,STORE,makeInitialData,DEFAULT_SETTINGS);
+    data=result.data||makeInitialData();storageLocked=Boolean(result.error);
+    applyThemeAppearance(data.settings.theme==='dark');navigate('today');
+  },toast
+});
+void accountClient.start();
