@@ -107,7 +107,7 @@ export async function onRequestPost({request,env}){
       });
       if(!result.ok)return json({error:errorMessage(result,action)},result.status===429?429:400);
       const verified=await supabaseData(result);
-      if(!verified?.access_token||!verified?.refresh_token||!verified?.user?.id)
+      if(!verified?.access_token||!verified?.refresh_token||!verified?.user?.id||!verified?.user?.email_confirmed_at)
         return json({error:'لم تكتمل عملية التحقق. حاول تسجيل الدخول.'},400);
       const h=new Headers();setSessionCookies(h,verified);
       if(type==='recovery')await setRecoveryProof(h,env,verified.user.id);
