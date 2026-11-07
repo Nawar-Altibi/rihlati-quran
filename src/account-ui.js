@@ -116,7 +116,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       '<div class="account-dashboard-actions">'+
       '<button type="button" class="secondary" data-account-action="sync">حاول مزامنة الآن</button>'+
       '<button type="button" class="secondary" data-account-action="export">صدّر نسخة احتياطية</button>'+
-      '<button type="button" class="account-logout" data-account-action="logout">تسجيل الخروج</button></div></div>';
+      '<button type="button" class="account-logout" data-account-action="'+(pending||sending||blocked?'export-and-logout':'logout')+'">'+
+      (pending||sending||blocked?'تنزيل نسخة احتياطية ثم الخروج':'تسجيل الخروج')+'</button></div></div>';
     if(!registration&&modal==='login')content+='<p class="account-help">إنشاء الحسابات الجديدة غير متاح حتى إكمال إعدادات الأمان وإرسال البريد.</p>';
     return '<div class="account-overlay" data-account-close><section class="account-dialog" role="dialog" aria-modal="true" aria-label="'+title+'">'+
       '<div class="account-dialog-head"><div class="account-kicker">رِحلتي مع القرآن</div>'+
@@ -280,15 +281,20 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       toast('جُهزت نسخة احتياطية من تقدم هذا المتصفح.');
       return;
     }
-    if(action==='logout'){
-      if(pending||sending||blocked){
-        error='في تغييرات لم نتأكد من حفظها. صدّر نسخة احتياطية أولًا ثم أعد المحاولة.';
+    if(action==='logout'||action==='export-and-logout'){
+      if(sending){error='ما زالت مزامنة جارية. حاول بعد انتهاء العملية.';renderModal();return;}
+      if(action==='export-and-logout'){
+        if(!confirm('في تغييرات غير مؤكدة بالسحابة. رح ننزّل نسخة منها على جهازك، وبعدين نخرج من الحساب بدون الكتابة فوق بياناته. متابعة؟'))return;
+        saveCopy(pendingRecovery?.payload||pending||getData());
+      }else if(pending||blocked){
+        error='لديك تغييرات غير محفوظة؛ نزّل نسخة احتياطية أولًا.';
         renderModal();return;
       }
       busy=true;renderModal();
       try{
         await post('logout');
-        user=null;mode='guest';revision=0;blocked=false;pending=null;
+        if(user)sessionStorage.removeItem(safeSessionKey(user.id));
+        user=null;mode='guest';revision=0;blocked=false;pending=null;pendingRecovery=null;
         restoreGuest();close();buttonView();toast('تم تسجيل الخروج. رجعت لبيانات الضيف الموجودة على هالجهاز.');
       }catch(e){error=readableError(e);renderModal();}
       finally{busy=false;}
