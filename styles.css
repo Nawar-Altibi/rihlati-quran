@@ -1038,6 +1038,7 @@ body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{
 .account-dashboard p{font-size:13px;color:var(--muted);line-height:1.7;margin:0}
 .account-dashboard-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}
 .account-dashboard-actions button{white-space:normal;font-size:12px;min-height:41px}
+.account-dashboard-actions .account-switch{grid-column:1/-1}
 .account-logout{grid-column:1/-1;background:var(--surface2);border:1px solid var(--line);color:var(--text)}
 body.dark .account-entry{background:#274433;border-color:#51765a;color:#d7f7df}
 body.dark .account-entry:hover{background:#2c543b}

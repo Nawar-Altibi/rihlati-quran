@@ -412,6 +412,7 @@ async function startOAuth(){
       const authorize=new URL(String(url));
       assert.equal(authorize.searchParams.get('provider'),'google');
       assert.equal(authorize.searchParams.get('scopes'),'openid email profile');
+      assert.equal(authorize.searchParams.get('prompt'),'select_account');
       assert.equal(authorize.searchParams.get('code_challenge_method'),'s256');
       return new Response(null,{status:302,headers:{Location:'https://accounts.google.com/o/oauth2/v2/auth?client_id=public-test'}});
     }
@@ -574,12 +575,18 @@ test('Google sessions use the existing refresh and logout endpoints and protecte
 
 test('Google sign-in UI is mobile-safe, flag-gated, and retains explicit onboarding and logout flows',()=>{
   const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
+  const googleStart=readFileSync(new URL('../functions/api/account/google/start.js',import.meta.url),'utf8');
   const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
   assert.match(client,/googleSignIn/);
   assert.match(client,/المتابعة باستخدام Google/);
   assert.match(client,/أو المتابعة بالبريد الإلكتروني/);
   assert.match(client,/data-account-action="import-guest"/);
+  assert.match(client,/data-account-action="switch-account">الخروج والدخول بحساب آخر/);
+  assert.match(client,/if\(action==='logout'\|\|action==='export-and-logout'\|\|action==='switch-account'\)/);
+  assert.match(client,/if\(switching\)\{busy=false;open\('login'\)/);
   assert.match(client,/google-cancelled/);
+  assert.match(googleStart,/authorize\.searchParams\.set\('prompt','select_account'\)/);
+  assert.match(styles,/\.account-dashboard-actions \.account-switch\{grid-column:1\/-1\}/);
   assert.match(styles,/\.account-google-button\{[\s\S]*?width:100%/);
   assert.match(styles,/@media\(max-width:600px\)[\s\S]*?\.account-google-button/);
 });

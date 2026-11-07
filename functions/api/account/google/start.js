@@ -28,6 +28,7 @@ export async function onRequestPost({request,env}){
   const authorize=new URL('/auth/v1/authorize',env.SUPABASE_URL);
   authorize.searchParams.set('provider','google');
   authorize.searchParams.set('scopes','openid email profile');
+  authorize.searchParams.set('prompt','select_account');
   authorize.searchParams.set('redirect_to',callback.href);
   authorize.searchParams.set('code_challenge',challenge);
   authorize.searchParams.set('code_challenge_method','s256');

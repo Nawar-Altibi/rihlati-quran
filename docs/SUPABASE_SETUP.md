@@ -16,6 +16,8 @@
 
 ينفذ Pages Function تدفق Authorization Code مع PKCE: ينشئ `state` و`code_verifier` عشوائيين، ويحفظهما موقّعين في cookie مؤقت `Secure; HttpOnly; SameSite=Lax` مدته عشر دقائق. Supabase يدير التحقق من حالة OAuth مع Google؛ عند العودة يتحقق التطبيق أيضًا من `state` والـcookie، ثم يرسل `code` و`code_verifier` إلى Supabase من الخادم. لا تظهر access/refresh tokens في الرابط أو JavaScript أو `localStorage`؛ تحفظ الجلسة في كوكيز HttpOnly الموجودة وتستخدمها عمليات التجديد والخروج الحالية. يُطلب فقط `openid email profile` ولا يُخزن Google provider token.
 
+من لوحة الحساب، زر **الخروج والدخول بحساب آخر** ينهي جلسة Supabase الحالية، يعيد عرض بيانات الضيف المحلية، ثم يفتح شاشة الدخول. عند اختيار Google يرسل التطبيق `prompt=select_account` كي يتمكن المستخدم من اختيار حساب Google مختلف حتى لو بقيت جلسة Google في المتصفح. عند وجود تغييرات غير محفوظة، يطلب التطبيق تنزيل نسخة احتياطية قبل تبديل الحساب.
+
 ### Google Cloud
 
 لا توجد وصلة لإدارة Google Cloud في هذه الجلسة؛ لم نفحص أو نغيّر مشروع OAuth هناك. أكمل يدويًا في [Google Cloud Console](https://console.cloud.google.com/auth/overview) إذا احتجت تعديل شاشة الموافقة أو حسابات الاختبار:

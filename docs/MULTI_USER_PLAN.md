@@ -61,6 +61,7 @@
 
 - Google OAuth يستخدم مزود Supabase Auth نفسه، دون Resend أو SMTP أو OTP بالبريد. Pages Function يبدأ Authorization Code مع PKCE ويستعمل `/auth/v1/token?grant_type=pkce` لتبادل الكود من الخادم.
 - Cookie `__Host-rihlati-oauth-flow` قصيرة العمر وموقّعة و`Secure; HttpOnly; SameSite=Lax` وتحمل `state` وverifier. callback يقارن state، يرفض أكواد الخطأ أو المعاد استخدامها، ثم يضع جلسة Supabase في كوكيز الجلسة الموجودة. لا يظهر session token في URL أو JavaScript أو `localStorage`.
+- زر **الخروج والدخول بحساب آخر** ينهي جلسة Supabase، يعيد وضع الضيف المحلي، ويفتح شاشة الدخول. طلب Google يضم `prompt=select_account` لإظهار مبدّل حسابات Google؛ إذا كانت تغييرات المستخدم غير مؤكدة، يلزم تصدير نسخة احتياطية قبل التبديل.
 - Supabase يتحقق من حالة OAuth مع Google. التطبيق يتحقق أيضًا من `state` المربوط بالـcookie ويرفض أي وجهة callback خارج مساره الثابت. النطاقات المطلوبة فقط `openid email profile`.
 - زر Google لا يعمل إلا إذا كان `GOOGLE_SIGNIN_ENABLED=true` وأكد Supabase المزود من `/auth/v1/settings` أو من تحويل endpoint التفويض إلى Google للـcallback الدقيق. القيمة الافتراضية للعلم مغلقة؛ التسجيل بالبريد له علم مستقل ويظل مغلقًا.
 - عند أول دخول من Google، يعيد النظام استخدام مسار onboarding نفسه: حالة سحابية فارغة واختيار صريح للبداية أو استيراد الضيف. الحساب العائد يحمّل صفه مع revision/RLS المعتادين. لا يتم نسخ بيانات المؤلف أو استيراد الضيف تلقائيًا.

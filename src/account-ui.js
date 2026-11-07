@@ -128,6 +128,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       '<div class="account-dashboard-actions">'+
       '<button type="button" class="secondary" data-account-action="sync">حاول مزامنة الآن</button>'+
       '<button type="button" class="secondary" data-account-action="export">صدّر نسخة احتياطية</button>'+
+      '<button type="button" class="secondary account-switch" data-account-action="switch-account">الخروج والدخول بحساب آخر</button>'+
       '<button type="button" class="account-logout" data-account-action="'+(pending||sending||blocked?'export-and-logout':'logout')+'">'+
       (pending||sending||blocked?'تنزيل نسخة احتياطية ثم الخروج':'تسجيل الخروج')+'</button></div></div>';
     if(!registration&&modal==='login')content+='<p class="account-help">إنشاء الحسابات الجديدة غير متاح حتى إكمال إعدادات الأمان وإرسال البريد.</p>';
@@ -336,10 +337,14 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       toast('جُهزت نسخة احتياطية من تقدم هذا المتصفح.');
       return;
     }
-    if(action==='logout'||action==='export-and-logout'){
-      if(sending){error='ما زالت مزامنة جارية. حاول بعد انتهاء العملية.';renderModal();return;}
-      if(action==='export-and-logout'){
-        if(!confirm('في تغييرات غير مؤكدة بالسحابة. رح ننزّل نسخة منها على جهازك، وبعدين نخرج من الحساب بدون الكتابة فوق بياناته. متابعة؟'))return;
+    if(action==='logout'||action==='export-and-logout'||action==='switch-account'){
+      if(busy||sending){error='ما زالت عملية أخرى جارية. حاول بعد انتهائها.';renderModal();return;}
+      const switching=action==='switch-account';
+      if(action==='export-and-logout'||(switching&&(pending||blocked))){
+        const prompt=switching
+          ?'في تغييرات غير مؤكدة بالسحابة. رح ننزّل نسخة منها على جهازك، ثم نخرج ونفتح تسجيل الدخول للحساب الآخر. متابعة؟'
+          :'في تغييرات غير مؤكدة بالسحابة. رح ننزّل نسخة منها على جهازك، وبعدين نخرج من الحساب بدون الكتابة فوق بياناته. متابعة؟';
+        if(!confirm(prompt))return;
         saveCopy(pendingRecovery?.payload||pending||getData());
       }else if(pending||blocked){
         error='لديك تغييرات غير محفوظة؛ نزّل نسخة احتياطية أولًا.';
@@ -350,7 +355,9 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
         await post('logout');
         if(user)sessionStorage.removeItem(safeSessionKey(user.id));
         user=null;mode='guest';revision=0;blocked=false;pending=null;pendingRecovery=null;
-        restoreGuest();close();buttonView();toast('تم تسجيل الخروج. رجعت لبيانات الضيف الموجودة على هالجهاز.');
+        restoreGuest();buttonView();
+        if(switching){busy=false;open('login');toast('تم تسجيل الخروج. اختر الحساب الذي تريد المتابعة به.');}
+        else{close();toast('تم تسجيل الخروج. رجعت لبيانات الضيف الموجودة على هالجهاز.');}
       }catch(e){error=readableError(e);renderModal();}
       finally{busy=false;}
     }
