@@ -58,7 +58,18 @@
 9. اختبر الواجهة على شاشات 390 و430 و768 و1512، والـDark/Light، ولوحة المفاتيح.
 10. أكمل سياسة خصوصية ومراجعة الاحتفاظ بالبيانات وحذف حسابات المستخدمين ودعم الاستعادة قبل إطلاق عام.
 
-## حالة التنفيذ قبل الربط
+## حالة الإعداد الفعلية — 2026-11-07
+
+- **Supabase المتصل:** مشروع `xjalftonhiipohjophyv` في `us-east-1`، وقد أكد مالك المشروع أنه مخصص لرِحلتي مع القرآن.
+- **SQL:** طُبقت migration `20261107085937_001_user_state` على المشروع. الجدولان `public.user_state` و`public.account_recovery_proofs` موجودان، كلاهما RLS مفعّل، و`anon` لا يملك SELECT، وSecurity Advisor لم يُظهر ملاحظات لحظة الفحص.
+- **Cloudflare Pages / Preview فقط:** أُضيفت متغيرات `SUPABASE_URL` و`SUPABASE_PUBLISHABLE_KEY` و`AUTH_FLOW_SECRET` و`TURNSTILE_SITE_KEY` و`TURNSTILE_SECRET_KEY` مع `ACCOUNTS_ENABLED=true` و`ACCOUNT_REGISTRATION_ENABLED=false`. الأسرار غير مدرجة في المستودع.
+- **Cloudflare Turnstile:** أُنشئ widget باسم `Rihlati Quran — account protection` للدومين `rihlati-quran.pages.dev` والنطاقات الفرعية. هذا لا يعني أنه فُعّل داخل إعدادات **Supabase Auth** بعد.
+- **Production:** لم تُضبط متغيرات الحسابات في بيئة production؛ تبقى وظيفة الحسابات غير مفعّلة في النسخة العامة.
+- **الإعدادات المعلقة:** تغيير اسم عرض مشروع Supabase إلى `Rihlati Quran` من لوحة التحكم، تأكيد البريد و`Site URL`، SMTP مخصص وقوالب OTP، ربط Turnstile ضمن Supabase Auth، الحماية من كثرة الطلبات، حقوق المستخدم والخصوصية والحذف، والاختبارات الحقيقية بحسابين.
+- **ملاحظة 2026:** المشاريع الجديدة على خطة Supabase Free مع مزوّد البريد الافتراضي قد لا تسمح بتعديل قوالب البريد؛ إعداد SMTP مخصص مطلوب لاستخدام قوالب OTP المقصودة.
+- **بوابة الإطلاق:** لا يُفعّل `ACCOUNT_REGISTRATION_ENABLED=true` ولا يُدمج هذا الفرع بغرض الإطلاق حتى تكتمل التحققات أعلاه.
+
+## حالة التنفيذ والربط
 
 - المتصفح في وضع ضيف يعمل كما كان، باستثناء أن الزائر الجديد يبدأ بسجل فارغ بدل بيانات صاحب المشروع.
 - `GET /api/account` يعيد `enabled:false` إذا لم تضبط متغيرات Supabase السابقة؛ نافذة الحساب تشرح أن التفعيل غير جاهز.
