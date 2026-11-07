@@ -62,7 +62,7 @@ test('sidebar vector icons are real valid scalable SVG with no runtime CDN depen
   globalThis.document={querySelectorAll:()=>[
     {dataset:{view:'today'},querySelector:()=>{const x={innerHTML:''};spans.push(x);return x;}},
     {dataset:{view:'settings'},querySelector:()=>{const x={innerHTML:''};spans.push(x);return x;}}
-  ],querySelector:()=>brand};
+  ],querySelector:selector=>selector==='.brand-mark'?brand:null};
   try{applySidebarVectors();assert.ok(spans.every(x=>x.innerHTML.includes('<svg')));assert.match(brand.innerHTML,/brand-vector-frame/);}
   finally{globalThis.document=prevDoc;}
 });
