@@ -405,6 +405,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       open('login');
       error=returnStatus==='google-cancelled'?'تم إلغاء تسجيل الدخول باستخدام Google.':
         returnStatus==='google-unavailable'?'تسجيل الدخول باستخدام Google غير متاح حاليًا.':
+        returnStatus==='google-flow-error'?'انتهت محاولة الدخول أو تعذر مطابقتها. افتح الموقع بنفس المتصفح وجرّب من جديد دون فتح محاولات متزامنة.':
           'تعذر تسجيل الدخول باستخدام Google، حاول مجددًا.';
       renderModal();
     }
