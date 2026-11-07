@@ -56,3 +56,16 @@ test('dark styles cover every primary screen and colored Quran reader state',()=
   ])assert.ok(dark.includes(selector),'Missing dark mode override '+selector);
   assert.match(dark,/prefers-reduced-motion:reduce/);
 });
+
+test('Quran verse selection uses a visible outline and keyboard-current cue',()=>{
+  assert.match(dark,/body\.dark \.mushaf-verse\.selected\s*\{[^}]*outline:\s*1px solid #91c9a0/s);
+  assert.match(dark,/body\.dark \.mushaf-verses\.is-test-mode \.mushaf-verse\.is-testing-current\s*\{[^}]*box-shadow:/s);
+});
+test('appearance toggles update browser chrome color without changing saved study data',()=>{
+  const app=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
+  assert.match(app,/function applyThemeAppearance\(isDark\)/);
+  assert.match(app,/meta\[name="theme-color"\]/);
+  assert.match(app,/'#101a17':'#f7f6f0'/);
+  assert.match(app,/if\(persist\(\)\)applyThemeAppearance\(t\.checked\)/);
+  assert.match(app,/if\(persist\(\)\)applyThemeAppearance\(data\.settings\.theme==='dark'\)/);
+});
