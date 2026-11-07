@@ -112,7 +112,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       '<div><b>'+escUser()+'</b><small dir="ltr">'+esc(user?.email||'')+'</small></div></div>'+
       '<div class="account-cloud-state">'+statusText()+'</div>'+
       '<p>تقدم الحساب محفوظ في السحابة ومتاح بعد الدخول من جهاز آخر. نسخة الضيف على هالجهاز محفوظة بشكل منفصل.</p>'+
-      (blocked?'<div class="account-notice account-notice-error">وجدنا تغييرات من جهاز آخر. ما رح نمسحها. صدّر نسخة من تقدمك الحالي قبل اختيار أي استعادة.</div>':'')+
+      (blocked?'<div class="account-notice account-notice-error">في تغييرات غير متزامنة. ما رح نكتب فوق بيانات الجهاز الآخر. صدّر نسخة احتياطية من التغييرات قبل المتابعة.</div>':'')+
       '<div class="account-dashboard-actions">'+
       '<button type="button" class="secondary" data-account-action="sync">حاول مزامنة الآن</button>'+
       '<button type="button" class="secondary" data-account-action="export">صدّر نسخة احتياطية</button>'+
@@ -208,8 +208,9 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       mode='account';
       if(cached?.payload){
         pendingRecovery=cached;
-        showCloudWarning('في تغييرات من جلسة سابقة ما تأكد حفظها. افتح الحساب لتصدير نسخة احتياطية قبل أي تعديل.');
         blocked=true;
+        error='في تغييرات من جلسة سابقة ما تأكد حفظها. ما رح ننقلها فوق التقدم الموجود بالسحابة تلقائيًا. اختر تصدير نسخة من الخيارات.';
+        open('dashboard');buttonView();return;
       }
       close();buttonView();return;
     }
@@ -232,7 +233,10 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   async function handleForm(form){
     if(busy)return;
     const kind=form.dataset.accountForm,fd=new FormData(form);
-    busy=true;error='';renderModal();
+    busy=true;error='';
+    const submitButton=form.querySelector('[type="submit"]');
+    if(submitButton)submitButton.disabled=true;
+    const verifiedCaptchaToken=captchaToken;
     try{
       if(kind==='new'){
         const mins=Number(fd.get('dailyMinutes')),stage=String(fd.get('stage')||'amma');
@@ -242,7 +246,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       }
       const payload={email:String(fd.get('email')||email).trim().toLowerCase(),
         password:String(fd.get('password')||''),displayName:String(fd.get('displayName')||''),
-        captchaToken};
+        captchaToken:verifiedCaptchaToken};
       email=payload.email||email;
       const result=await post(kind,payload.code?payload:{...payload,
         ...(kind==='verify'?{code:String(fd.get('code')||''),purpose}:{} )});
@@ -271,7 +275,11 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       return;
     }
     if(action==='sync'){if(blocked){error='تضارب التعديل يحتاج نسخة احتياطية قبل الحل. لن نستبدل سجلات جهاز آخر تلقائيًا.';renderModal();return;}await sync();return;}
-    if(action==='export'){saveCopy(pending||getData());toast('جُهزت نسخة احتياطية من التقدم الحالي.');return;}
+    if(action==='export'){
+      saveCopy(pendingRecovery?.payload||pending||getData());
+      toast('جُهزت نسخة احتياطية من تقدم هذا المتصفح.');
+      return;
+    }
     if(action==='logout'){
       if(pending||sending||blocked){
         error='في تغييرات لم نتأكد من حفظها. صدّر نسخة احتياطية أولًا ثم أعد المحاولة.';
