@@ -20,8 +20,8 @@ export function validatePlanInput(input) {
   if (!surah) throw new Error('اختار سورة صحيحة من القائمة.');
   if (!Object.hasOwn(PLAN_KINDS,input?.kind)) throw new Error('اختار نوع ورد صحيح.');
   if (!boundedMinutes(input?.minutes)) throw new Error('مدة الورد لازم تكون بين 5 و180 دقيقة.');
-  const start=Number(input?.fromAyah)||1;
-  const end=Number(input?.toAyah)||surah.ayahs;
+  const start=input?.fromAyah==null||input.fromAyah===''?1:Number(input.fromAyah);
+  const end=input?.toAyah==null||input.toAyah===''?surah.ayahs:Number(input.toAyah);
   if(!Number.isInteger(start)||!Number.isInteger(end)||start<1||end<start||end>surah.ayahs)
     throw new Error('نطاق الآيات غير صحيح.');
   return {
@@ -63,7 +63,7 @@ export function removePlanEntry(data,id) {
   return true;
 }
 
-export function startSuggestedPlan(data,start=addDays(todayKey(),1),id=()=>crypto.randomUUID()) {
+export function startSuggestedPlan(data,start=todayKey(),id=()=>crypto.randomUUID()) {
   if(planEntries(data).length)throw new Error('عندك خطة موجودة؛ عدّلها بدل استبدالها تلقائيًا.');
   if(!isValidDateKey(start))throw new Error('تاريخ البداية غير صالح.');
   // This template records intentions, never past memorization or a completed task.
