@@ -248,7 +248,7 @@ test('password recovery endpoint rejects replay after the one-time proof is cons
   assert.equal(updates,1);
 });
 
-test('signup OTP resend uses Supabase Auth, Turnstile, and a generic response',async()=>{
+test('signup OTP resend uses Supabase Auth and Turnstile without claiming delivery',async()=>{
   let sent;
   const r=await withFetch(async(url,options)=>{
     assert.match(String(url),/\/auth\/v1\/resend$/);
@@ -260,7 +260,7 @@ test('signup OTP resend uses Supabase Auth, Turnstile, and a generic response',a
   assert.equal(sent.type,'signup');
   assert.equal(sent.email,'new@example.com');
   assert.equal(sent.gotrue_meta_security.captcha_token,'test-captcha-token-long-enough');
-  assert.match((await r.json()).message,/إذا كان الحساب غير مؤكّد/);
+  assert.match((await r.json()).message,/لا نستطيع تأكيد وصول الرسالة/);
 });
 
 test('password recovery resend stays generic and sends through Supabase Auth',async()=>{
@@ -289,17 +289,26 @@ test('password recovery remains available while public registration stays disabl
   assert.match((await r.json()).message,/لا نستطيع تأكيد وصول الرسالة/);
 });
 
-test('resend rejects requests without fresh CAPTCHA and upstream rate limits stay visible',async()=>{
+test('resend requires CAPTCHA and hides signup rate limits to avoid address enumeration',async()=>{
   let called=false;
   const missingCaptcha=await withFetch(async()=>{called=true;return mockResponse({});},async()=>
     accountPost({request:request('','POST',{action:'resend',email:'person@example.com',purpose:'email'}),env}));
   assert.equal(missingCaptcha.status,400);
   assert.equal(called,false);
-  const throttled=await withFetch(async()=>mockResponse({msg:'rate limit'},429),async()=>
-    accountPost({request:request('','POST',{action:'resend',email:'person@example.com',purpose:'email',
-      captchaToken:'test-captcha-token-long-enough'}),env}));
-  assert.equal(throttled.status,429);
-  assert.match((await throttled.json()).error,/حد المحاولات/);
+  const payload={action:'resend',email:'person@example.com',purpose:'email',captchaToken:'test-captcha-token-long-enough'};
+  const upstreamResponses=[mockResponse({}),mockResponse({msg:'invalid'},400),
+    mockResponse({msg:'rate limit'},429),mockResponse({msg:'smtp unavailable'},500)];
+  const publicResponses=[];
+  for(const upstream of upstreamResponses){
+    publicResponses.push(await withFetch(async()=>upstream,async()=>
+      accountPost({request:request('','POST',payload),env})));
+  }
+  publicResponses.push(await withFetch(async()=>{throw Error('network unavailable');},async()=>
+    accountPost({request:request('','POST',payload),env})));
+  const bodies=[];
+  for(const response of publicResponses){assert.equal(response.status,200);bodies.push(await response.json());}
+  for(const body of bodies.slice(1))assert.deepEqual(body,bodies[0]);
+  assert.match(bodies[0].message,/لا نستطيع تأكيد وصول الرسالة/);
 });
 
 test('password recovery hides provider failures without claiming the message was delivered',async()=>{
@@ -309,12 +318,16 @@ test('password recovery hides provider failures without claiming the message was
   const deliveredRequest=await responseFor(mockResponse({}));
   const failedRequest=await responseFor(mockResponse({msg:'smtp unavailable'},500));
   const rateLimitedRequest=await responseFor(mockResponse({msg:'rate limit'},429));
+  const networkFailure=await withFetch(async()=>{throw Error('network unavailable');},async()=>
+    accountPost({request:request('','POST',payload),env}));
   assert.equal(deliveredRequest.status,200);
   assert.equal(failedRequest.status,deliveredRequest.status);
   assert.equal(rateLimitedRequest.status,deliveredRequest.status);
+  assert.equal(networkFailure.status,deliveredRequest.status);
   const delivered=await deliveredRequest.json(),failed=await failedRequest.json(),limited=await rateLimitedRequest.json();
   assert.deepEqual(failed,delivered);
   assert.deepEqual(limited,delivered);
+  assert.deepEqual(await networkFailure.json(),delivered);
   assert.doesNotMatch(delivered.message,/تم الإرسال|أرسلنا/);
   assert.match(delivered.message,/لا نستطيع تأكيد وصول الرسالة/);
 });

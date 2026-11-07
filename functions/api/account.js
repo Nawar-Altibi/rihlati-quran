@@ -95,9 +95,11 @@ export async function onRequestPost({request,env}){
     }
     if(action==='recover'){
       const captcha=requiredCaptcha(body,settings);
-      await supabase(env,'/auth/v1/recover',{
-        method:'POST',body:{email,...captcha}
-      });
+      try{
+        await supabase(env,'/auth/v1/recover',{
+          method:'POST',body:{email,...captcha}
+        });
+      }catch{ /* Keep network/provider failures indistinguishable from unknown addresses. */ }
       // Keep status and copy identical for known/unknown email, throttling,
       // and provider delivery errors. The UI must not claim delivery.
       return json({message:'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'});
@@ -105,13 +107,14 @@ export async function onRequestPost({request,env}){
     if(action==='resend'){
       const captcha=requiredCaptcha(body,settings);
       const purpose=body.purpose==='recovery'?'recovery':'email';
-      const result=purpose==='recovery'
-        ?await supabase(env,'/auth/v1/recover',{method:'POST',body:{email,...captcha}})
-        :await supabase(env,'/auth/v1/resend',{method:'POST',body:{type:'signup',email,...captcha}});
-      if(purpose==='recovery')return json({message:'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'});
-      if(result.status===429)return json({error:errorMessage(result,action)},429);
-      if(!result.ok)return json({error:'تعذر طلب الرمز الآن. انتظر قليلًا ثم حاول مجددًا.'},upstreamStatus(result));
-      return json({ok:true,message:'إذا كان الحساب غير مؤكّد، أرسلنا طلب رمز تحقق جديد.'});
+      if(purpose==='recovery'){
+        try{await supabase(env,'/auth/v1/recover',{method:'POST',body:{email,...captcha}});}
+        catch{ /* Keep network/provider failures indistinguishable from unknown addresses. */ }
+        return json({message:'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'});
+      }
+      try{await supabase(env,'/auth/v1/resend',{method:'POST',body:{type:'signup',email,...captcha}});}
+      catch{ /* Keep network/provider failures indistinguishable from unknown addresses. */ }
+      return json({message:'إذا كان الحساب غير مؤكّد، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'});
     }
     if(action==='verify'){
       if(!codeValid(body.code))return json({error:'اكتب رمز التحقق الموجود بالبريد.'},400);

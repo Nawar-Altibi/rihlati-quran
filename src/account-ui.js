@@ -170,7 +170,6 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   }
   function startResendCooldown(){
     resendUntil=Date.now()+60000;
-    try{sessionStorage.setItem('rihlati-auth-resend-until',String(resendUntil));}catch{}
     if(resendInterval)clearInterval(resendInterval);
     resendInterval=setInterval(()=>{
       const control=root?.querySelector('[data-account-action="resend"]');
@@ -311,7 +310,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
         startResendCooldown();
         toast(purpose==='recovery'
           ?'إذا كان البريد مسجّلًا، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.'
-          :'إذا كان الحساب غير مؤكّد، أرسلنا طلب رمز تحقق جديد.');
+          :'إذا كان الحساب غير مؤكّد، افحص الوارد والرسائل غير المرغوب فيها. لا نستطيع تأكيد وصول الرسالة؛ إن لم تصلك فحاول بعد دقيقة.');
       }catch(e){error=readableError(e);if(e.status===429)startResendCooldown();}
       finally{busy=false;renderModal();}
       return;
