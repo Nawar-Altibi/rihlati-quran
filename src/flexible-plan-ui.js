@@ -4,7 +4,7 @@ import {planEntries,savePlanEntry,movePlanEntry,removePlanEntry,startSuggestedPl
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatDate=day=>new Intl.DateTimeFormat('ar',{weekday:'long',day:'numeric',month:'short'}).format(new Date(day+'T12:00:00'));
-const kindName={review:'مراجعة',memorize:'حفظ جديد',recitation:'تحضير تسميع'};
+const kindName={review:'مراجعة',memorize:'حفظ جديد',recitation:'تسميع عند المعلّم'};
 const stateName={done:'تم تسجيل الإنجاز',today:'اليوم',upcoming:'قادم',missed:'فات موعده — قابل للترحيل'};
 const stateClass={done:'done',today:'today',upcoming:'upcoming',missed:'missed'};
 const B=(a,t,id='',cls='secondary small-btn')=>'<button type="button" class="'+cls+'" data-action="'+a+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+t+'</button>';
@@ -45,9 +45,9 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
       '</div><p class="journey-guide-note">الرسومات توضيحية. سجلاتك محفوظة على هذا المتصفح، والأفضل تصدّر نسخة احتياطية من الإعدادات.</p></section>';
   }
   function emptyState(){
-    const start=addDays(todayKey(),1);
+    const start=todayKey();
     return '<section class="journey-start"><span class="journey-start-star">✧</span><div><h3>ابدأ بخطة خفيفة تناسبك</h3>'+
-      '<p>بما إنك حابب ترجع تثبّت جزء عمّ من الصفر، فينا نقترح '+formatDate(start)+' مراجعة النبأ والنازعات وعبس، وبعدها التكوير في اليوم التالي. هي مجرد خطة، مو إنجاز مسجّل؛ فيك تغيّر كل تفصيل.</p>'+
+      '<p>بما إنك حابب ترجع تثبّت جزء عمّ من الصفر، فينا نقترح '+formatDate(start)+' مراجعة النبأ والنازعات وعبس (10 دقائق لكل سورة)، والتكوير في اليوم التالي. هي مجرد خطة، مو إنجاز مسجّل؛ فيك تغيّر كل تفصيل.</p>'+
       '<div class="simple-actions">'+B('journey-template','اعتمد الخطة المبدئية','','primary')+B('journey-add','أبدأ بخطة من عندي')+'</div></div></section>';
   }
   function today() {
@@ -85,7 +85,6 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
     if(id&&!existing)return toast('ما لقينا الورد المطلوب.');
     const v=existing||{date:todayKey(),kind:'review',surah:78,minutes:20,fromAyah:1,toAyah:40,notes:''};
     const count=SURAH_NAMES[v.surah-1]?.ayahs||40;
-    const whole=Number(v.fromAyah||1)===1&&Number(v.toAyah||count)===count;
     openModal(existing?'تعديل الورد':'إضافة ورد لخُطتك','<input name="journeyPlanForm" type="hidden" value="1">'+
       '<input type="hidden" name="id" value="'+esc(existing?.id||'')+'">'+
       '<div class="journey-modal-tip">هنا عم تخطط فقط؛ ما رح نسجّل أي سورة محفوظة أو مراجَعة إلا إذا أكدت إنجازها بعدين.</div>'+
@@ -126,7 +125,7 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
         case 'journey-open-surah':{const item=find(id);if(item)openMushafSurah(item.surah);return true;}
         case 'journey-log':{const item=find(id);if(item){
           if(item.kind==='review')openReview([item.surah]);
-          else if(item.kind==='memorize')openMemorize(item.surah);
+          else if(item.kind==='memorize')openMemorize(item.surah,item.fromAyah,item.toAyah);
           else openRecitation([item.surah]);
         }return true;}
       }
