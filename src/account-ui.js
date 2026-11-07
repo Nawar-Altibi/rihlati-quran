@@ -4,6 +4,7 @@ import {migrateData} from './storage.js';
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cloudRoot='/api/account';
 const STAGES=[['amma','جزء عمّ'],['tabarak','جزء تبارك'],['qad','جزء قد سمع'],['baqarah','سورة البقرة']];
+export const passwordsMatch=(password,confirmation)=>typeof password==='string'&&password.length>0&&password===confirmation;
 function readableError(error,fallback='حصل خطأ بالاتصال. حاول مرة ثانية.'){
   return typeof error?.message==='string'&&error.message?error.message:fallback;
 }
@@ -59,12 +60,13 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   }
   function page(){
     const title={login:'أهلًا بعودتك',signup:'أنشئ رحلتك الخاصة',verify:'أكّد بريدك',recover:'استعادة كلمة المرور',
-      password:'كلمة مرور جديدة',setup:'ابدأ رحلتك',dashboard:'حسابي ومزامنة التقدم',disabled:'حسابات رِحلتي'}[modal]||'حسابي';
+      password:'كلمة مرور جديدة',loading:'تحميل تقدمك',setup:'ابدأ رحلتك',dashboard:'حسابي ومزامنة التقدم',disabled:'حسابات رِحلتي'}[modal]||'حسابي';
     const intro={
       login:'سجّل دخولك حتى تلاقي خطتك ومراجعاتك على أجهزتك.',
       signup:'كل شخص إله سجل حفظ ومراجعات وخطة مستقلة تمامًا.',
       verify:'اكتب الرمز الذي وصل إلى بريدك. ما رح نسجّل أي إنجاز تلقائيًا.',
       recover:'أرسلنا لك رمزًا إذا كان البريد مسجّلًا.',
+      loading:'نتحقق من بيانات حسابك ونحمّل رحلتك بأمان.',
       setup:'كيف بتحب تبدأ؟ خطتك الجديدة لحالها، أو تنقل سجلات هالجهاز بإذنك.',
       dashboard:'تقدمك مرتبط بحسابك، وما في حدا تاني بيقدر يشوفه.'
     }[modal]||'';
@@ -72,6 +74,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     const formButton=(title,action)=>'<button type="submit" class="primary account-submit" '+(busy?'disabled':'')+'>'+title+'</button>';
     const emailInput=htmlInput('email','البريد الإلكتروني','email','example@email.com','required autocomplete="email" value="'+esc(email)+'"');
     if(modal==='disabled')content='<p class="account-notice">ميزة الحسابات قيد الإعداد. الموقع شغّال حاليًا كضيف بدون ما يغيّر بياناتك.</p>';
+    if(modal==='loading')content='<div class="account-form"><button type="button" class="primary account-submit" data-account-action="retry-state">حاول تحميل التقدم مجددًا</button><button type="button" class="account-logout" data-account-action="logout">أكمل كضيف · تسجيل الخروج</button></div>';
     if(modal==='login')content='<form class="account-form" data-account-form="login">'+emailInput+
       htmlInput('password','كلمة المرور','password','••••••••••••','required autocomplete="current-password"')+
       captcha()+formButton('تسجيل الدخول')+'</form>'+
@@ -80,6 +83,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     if(modal==='signup')content='<form class="account-form" data-account-form="signup">'+
       htmlInput('displayName','شو بتحب نناديك؟','text','اسمك الأول','required minlength="2" maxlength="50" autocomplete="name"')+
       emailInput+htmlInput('password','كلمة مرور قوية (12 حرفًا على الأقل)','password','••••••••••••',
+        'required minlength="12" maxlength="128" autocomplete="new-password"')+
+      htmlInput('passwordConfirm','أعد كتابة كلمة المرور','password','••••••••••••',
         'required minlength="12" maxlength="128" autocomplete="new-password"')+
       captcha()+formButton('إنشاء الحساب')+'</form>'+
       '<p class="account-help">رح تحتاج تؤكد بريدك قبل استخدام الحساب. لا تشارك رمز التأكيد مع أي شخص.</p>'+
@@ -200,6 +205,9 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     pending=structuredClone(doc);savePendingLocally();buttonView();void sync();return true;
   }
   async function loadState(){
+    mode='loading';
+    setData(makeNewUserData());
+    open('loading');
     const state=await api('/state');
     revision=Number(state.revision)||0;
     let cached=null;
@@ -218,6 +226,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     }
     // No rows for this user yet: explicit choice between brand-new data and
     // the separate legacy guest copy. Never import localStorage silently.
+    setData(makeNewUserData());
     mode='setup';open('setup');buttonView();
   }
   async function begin(payload){
@@ -249,6 +258,8 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       const payload={email:String(fd.get('email')||email).trim().toLowerCase(),
         password:String(fd.get('password')||''),displayName:String(fd.get('displayName')||''),
         captchaToken:verifiedCaptchaToken};
+      if(kind==='signup'&&!passwordsMatch(payload.password,String(fd.get('passwordConfirm')||'')))
+        throw new Error('كلمتا المرور غير متطابقتين.');
       email=payload.email||email;
       const result=await post(kind,payload.code?payload:{...payload,
         ...(kind==='verify'?{code:String(fd.get('code')||''),purpose}:{} )});
@@ -261,7 +272,16 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     finally{busy=false;renderModal();buttonView();}
   }
   async function handleAction(action){
-    if(action==='close'){close();return;}
+    if(action==='close'){
+      if(['setup','loading'].includes(modal)&&user){await handleAction('logout');return;}
+      close();return;
+    }
+    if(action==='retry-state'){
+      error='';
+      try{await loadState();}
+      catch(e){error=readableError(e);modal='loading';renderModal();}
+      return;
+    }
     if(action==='login'||action==='signup'||action==='recover'){
       if(action==='signup'&&!registration){error='إنشاء الحسابات غير مفعّل حتى إكمال حماية البريد والتحقق.';renderModal();return;}
       open(action);return;
@@ -304,7 +324,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   async function start(){
     button?.addEventListener('click',()=>open(user?(inAccount()?'dashboard':'setup'):'login'));
     root?.addEventListener('click',e=>{
-      if(e.target?.matches('[data-account-close]'))close();
+      if(e.target?.matches('[data-account-close]')){void handleAction('close');return;}
       const control=e.target.closest('[data-account-action]');
       if(control)void handleAction(control.dataset.accountAction);
     });
@@ -320,10 +340,12 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       registration=Boolean(session.registrationEnabled);
       siteKey=typeof session.captchaSiteKey==='string'?session.captchaSiteKey:null;
       if(available&&session.authenticated&&session.user){
-        user=session.user;await loadState();
+        user=session.user;
+        try{await loadState();}
+        catch(e){error=readableError(e);modal='loading';renderModal();}
       }
     }catch{available=false; /* Accounts unavailable; keep guest app safe. */ }
     buttonView();
   }
-  return {start,open,save,isAccount:inAccount,user:logUser};
+  return {start,open,save,isAccount:()=>Boolean(user),user:logUser};
 }

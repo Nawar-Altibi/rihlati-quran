@@ -4,6 +4,7 @@ import {readFileSync} from 'node:fs';
 import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof} from '../functions/_lib/account.js';
 import {onRequestGet as accountGet,onRequestPost as accountPost} from '../functions/api/account.js';
 import {onRequestGet as stateGet,onRequestPut as statePut} from '../functions/api/account/state.js';
+import {passwordsMatch} from '../src/account-ui.js';
 import {makeInitialData,makeNewUserData} from '../src/data.js';
 
 const env={
@@ -144,6 +145,30 @@ test('account client is isolated from guest localStorage and prompts explicit im
   assert.match(client,/expectedRevision:revision/);
   assert.match(client,/revision=result\.revision/);
   assert.doesNotMatch(client,/localStorage\.setItem/);
+});
+
+test('signup requires matching password confirmation before calling Auth',()=>{
+  const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
+  assert.match(client,/htmlInput\('passwordConfirm'/);
+  assert.match(client,/kind==='signup'&&!passwordsMatch\(payload\.password,String\(fd\.get\('passwordConfirm'\)\|\|''\)\)/);
+  assert.match(client,/كلمتا المرور غير متطابقتين/);
+  assert.equal(passwordsMatch('long-safe-password','long-safe-password'),true);
+  assert.equal(passwordsMatch('long-safe-password','different-password'),false);
+  assert.equal(passwordsMatch('',''),false);
+});
+
+test('first-time account setup hides guest data and cannot dismiss into guest storage',()=>{
+  const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
+  assert.match(client,/setData\(makeNewUserData\(\)\);\s*mode='setup';open\('setup'\)/);
+  assert.match(client,/\['setup','loading'\]\.includes\(modal\)&&user\)\{await handleAction\('logout'\);return;\}/);
+  assert.match(client,/isAccount:\(\)=>Boolean\(user\)/);
+});
+
+test('authenticated account state is hidden while loading and offers retry on failure',()=>{
+  const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
+  assert.match(client,/async function loadState\(\)\{\s*mode='loading';\s*setData\(makeNewUserData\(\)\);\s*open\('loading'\);\s*const state=await api\('\/state'\)/);
+  assert.match(client,/data-account-action="retry-state"/);
+  assert.match(client,/if\(action==='retry-state'\)/);
 });
 
 test('normal signed-in browser cannot set a new password without a verified recovery OTP',async()=>{
