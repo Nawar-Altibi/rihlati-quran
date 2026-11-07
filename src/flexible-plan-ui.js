@@ -1,5 +1,6 @@
 import { SURAH_NAMES } from './data.js';
 import { addDays, todayKey } from './logic.js';
+import { normalizeArabicSearch } from './quran-metadata.js';
 import {planEntries,savePlanEntry,movePlanEntry,removePlanEntry,startSuggestedPlan,planItemState,dailyPlanStats,surahLabel} from './flexible-plan.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -39,7 +40,7 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
     return '<section class="journey-guide" aria-label="دليل الاستخدام">'+
       '<div class="journey-guide-header"><div><span class="journey-eyebrow">دليل مصوّر مبسّط</span><h3>كيف تستخدم رحلتك بـ3 خطوات؟</h3></div>'+B('journey-guide','إخفاء الدليل')+'</div>'+
       '<div class="journey-guide-grid">'+
-      '<article><div class="journey-mini-visual"><span class="journey-mini-date">السبت · ٧ نوفمبر</span><span class="journey-mini-card">◷ سورة النبأ</span><span class="journey-mini-card">◷ سورة النازعات</span><span class="journey-mini-card">◷ سورة عبس</span></div><b>١. حضّر وردك</b><p>ضيف سورة أو مقطعًا لأي يوم. فيك تغيّر الترتيب والمدة والتاريخ بلا حدود ثابتة.</p></article>'+
+      '<article><div class="journey-mini-visual"><span class="journey-mini-date">'+formatDate(todayKey())+'</span><span class="journey-mini-card">◷ سورة النبأ</span><span class="journey-mini-card">◷ سورة النازعات</span><span class="journey-mini-card">◷ سورة عبس</span></div><b>١. حضّر وردك</b><p>ضيف سورة أو مقطعًا لأي يوم. فيك تغيّر الترتيب والمدة والتاريخ بلا حدود ثابتة.</p></article>'+
       '<article><div class="journey-mini-visual"><span class="journey-mini-card strong">◈ افتح المصحف</span><span class="journey-mini-verse">﴿ وَعَمَّ يَتَسَاءَلُونَ ﴾</span><span class="journey-mini-card">اكشف الآية عند الاختبار</span></div><b>٢. راجع واختبر نفسك</b><p>اقرأ بالمصحف أو أخفِ الآيات واكشفها بـEnter لتتأكد من حفظك.</p></article>'+
       '<article><div class="journey-mini-visual"><span class="journey-mini-card strong">✓ سجّل المراجعة</span><span class="journey-mini-meter"><i></i></span><span class="journey-mini-card">تقدّمك من سجلاتك الحقيقية</span></div><b>٣. سجّل إنجازك الفعلي</b><p>الورد المخطط ما بينحسب منجز حتى تسجّل الحفظ أو المراجعة أو التسميع فعلًا.</p></article>'+
       '</div><p class="journey-guide-note">الرسومات توضيحية. سجلاتك محفوظة على هذا المتصفح، والأفضل تصدّر نسخة احتياطية من الإعدادات.</p></section>';
@@ -91,7 +92,8 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
       '<div class="journey-modal-grid"><label class="field"><span>إيمتى؟</span><input class="input" name="date" type="date" value="'+esc(v.date)+'" required></label>'+
       '<label class="field"><span>نوع الورد</span><select class="select" name="kind">'+
       Object.entries(kindName).map(([k,t])=>'<option value="'+k+'"'+(v.kind===k?' selected':'')+'>'+t+'</option>').join('')+'</select></label>'+
-      '<label class="field"><span>السورة</span><select class="select" name="surah" id="journey-surah">'+
+      '<label class="field"><span>ابحث عن السورة بالاسم أو الرقم</span><input class="input" type="search" id="journey-surah-search" autocomplete="off" placeholder="مثلاً: يس أو 36"></label>'+
+      '<label class="field"><span>السورة (اختيار يدوي)</span><select class="select" name="surah" id="journey-surah">'+
       SURAH_NAMES.map(s=>'<option value="'+s.number+'"'+(s.number===v.surah?' selected':'')+'>'+s.number+' · '+esc(s.name)+'</option>').join('')+'</select></label>'+
       '<label class="field"><span>وقت تقريبي (دقيقة)</span><input class="input" name="minutes" type="number" min="5" max="180" step="5" value="'+v.minutes+'"></label>'+
       '<label class="field"><span>من الآية</span><input class="input" name="fromAyah" type="number" min="1" max="'+count+'" value="'+(v.fromAyah||1)+'"></label>'+
@@ -147,6 +149,18 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
     return true;
   }
   function input(e){
+    if(e.target.id==='journey-surah-search'){
+      const select=e.target.closest('.modal')?.querySelector('#journey-surah');
+      if(!select)return true;
+      const q=normalizeArabicSearch(e.target.value);
+      const found=SURAH_NAMES.filter(s=>normalizeArabicSearch(s.name).includes(q)||String(s.number).includes(q));
+      const old=Number(select.value);
+      const next=found.some(s=>s.number===old)?old:(found.length===1?found[0].number:0);
+      select.innerHTML='<option value="" disabled'+(next?'':' selected')+'>'+(found.length?'اختر السورة من '+found.length+' نتيجة':'ما في سور مطابقة')+'</option>'+
+        found.map(s=>'<option value="'+s.number+'"'+(next===s.number?' selected':'')+'>'+s.number+' · '+esc(s.name)+'</option>').join('');
+      if(next&&next!==old)input({target:select});
+      return true;
+    }
     if(e.target.id!=='journey-surah')return false;
     const meta=SURAH_NAMES.find(s=>s.number===Number(e.target.value));
     if(!meta)return true;
