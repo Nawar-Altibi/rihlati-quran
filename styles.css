@@ -924,3 +924,17 @@ body.dark :disabled{cursor:not-allowed}
 @media(prefers-reduced-motion:reduce){
   body.dark .sidebar,body.dark .settings-chevron,body.dark .journey-entry{transition:none}
 }
+
+
+/* Make the currently selected Quran verse unmistakable in night reading. */
+body.dark .mushaf-verse.selected{
+  color:#fff2d5;
+  background:#3f624b;
+  outline:1px solid #91c9a0;
+  box-shadow:inset 0 -2px 0 #9fdfb3;
+  -webkit-box-decoration-break:clone;
+  box-decoration-break:clone;
+}
+body.dark .mushaf-verses.is-test-mode .mushaf-verse.is-testing-current{
+  box-shadow:inset 3px 0 0 #9fdfb3;
+}
