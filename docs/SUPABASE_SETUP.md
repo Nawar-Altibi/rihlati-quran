@@ -14,7 +14,7 @@
 
 ## إعداد Sign in with Google
 
-ينفذ Pages Function تدفق Authorization Code مع PKCE: ينشئ `state` و`code_verifier` عشوائيين، ويحفظهما موقّعين في cookie مؤقت `Secure; HttpOnly; SameSite=Lax` مدته عشر دقائق. Supabase يدير التحقق من حالة OAuth مع Google؛ عند العودة يتحقق التطبيق أيضًا من `state` والـcookie، ثم يرسل `code` و`code_verifier` إلى Supabase من الخادم. لا تظهر access/refresh tokens في الرابط أو JavaScript أو `localStorage`؛ تحفظ الجلسة في كوكيز HttpOnly الموجودة وتستخدمها عمليات التجديد والخروج الحالية. يُطلب فقط `openid email profile` ولا يُخزن Google provider token.
+ينفذ Pages Function تدفق Authorization Code مع PKCE: ينشئ `state` و`code_verifier` عشوائيين، ويحفظهما موقّعين في cookie مؤقت `Secure; HttpOnly; SameSite=Lax` مدته عشر دقائق، ثم يوجّه المتصفح إلى Supabase Auth أولًا. يجب أن يزور المتصفح Supabase حتى يحفظ ويرسل cookie الحالة الخاصة به عبر تحويلات Google؛ لا تستخدم طلبًا خادميًا إلى authorize ثم تحويلاً مباشرًا إلى Google لأن ذلك يهمل cookie Supabase. عند العودة يتحقق التطبيق من `flow_id` وcookie الموقّع الخاص به، ثم يرسل `code` و`code_verifier` إلى Supabase من الخادم. لا تظهر access/refresh tokens في الرابط أو JavaScript أو `localStorage`؛ تحفظ الجلسة في كوكيز HttpOnly الموجودة وتستخدمها عمليات التجديد والخروج الحالية. يُطلب فقط `openid email profile` ولا يُخزن Google provider token.
 
 من لوحة الحساب، زر **الخروج والدخول بحساب آخر** ينهي جلسة Supabase الحالية، يعيد عرض بيانات الضيف المحلية، ثم يفتح شاشة الدخول. عند اختيار Google يرسل التطبيق `prompt=select_account` كي يتمكن المستخدم من اختيار حساب Google مختلف حتى لو بقيت جلسة Google في المتصفح. عند وجود تغييرات غير محفوظة، يطلب التطبيق تنزيل نسخة احتياطية قبل تبديل الحساب.
 
