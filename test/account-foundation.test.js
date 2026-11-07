@@ -54,12 +54,13 @@ test('user log in sets Secure HttpOnly SameSite cookies, not bearer tokens in re
     accountPost({request:request('','POST',{action:'login',email:user.email,password:'strong-passphrase',
       captchaToken:'test-captcha-token-long-enough'}),env}));
   assert.equal(r.status,200);
-  assert.equal((await r.json()).authenticated,true);
+  const publicResult=await r.clone().json();
+  assert.equal(publicResult.authenticated,true);
   const cookies=r.headers.get('Set-Cookie');
   assert.match(cookies,/HttpOnly/);
   assert.match(cookies,/Secure/);
   assert.match(cookies,/SameSite=Lax/);
-  assert.doesNotMatch(JSON.stringify(await r.clone().json()),/jwt-secret/);
+  assert.doesNotMatch(JSON.stringify(publicResult),/jwt-secret/);
 });
 test('new accounts get NO personal Quran historical data or seed completions',()=>{
   const original=makeInitialData(),fresh=makeNewUserData({stage:'tabarak',dailyMinutes:25});
