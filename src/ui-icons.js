@@ -27,7 +27,8 @@ const paths={
   info:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   user:'<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
-  bars:'<path d="M4 20V9M10 20V4M16 20v-7M22 20v-9"/>'
+  bars:'<path d="M4 20V9M10 20V4M16 20v-7M22 20v-9"/>',
+  menu:'<path d="M4 6h16M4 12h16M4 18h16"/>'
 };
 export function uiIcon(name,size=20){
   const path=paths[name]||paths.sparkle;
@@ -43,4 +44,9 @@ export function applySidebarVectors(){
   }
   const mark=document.querySelector('.brand-mark');
   if(mark){mark.classList.add('brand-vector');mark.innerHTML='<span class="brand-vector-frame">'+uiIcon('book',23)+'</span>';}
+  const tools={ 'quick-add':'plus','theme-toggle':'moon','mobile-menu':'menu'};
+  for(const [id,name] of Object.entries(tools)){
+    const button=document.querySelector('#'+id);
+    if(button)button.innerHTML=uiIcon(name,19);
+  }
 }
