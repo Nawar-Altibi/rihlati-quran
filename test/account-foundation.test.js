@@ -579,7 +579,7 @@ test('Google sign-in UI is mobile-safe, flag-gated, and retains explicit onboard
   const styles=readFileSync(new URL('../styles.css',import.meta.url),'utf8');
   assert.match(client,/googleSignIn/);
   assert.match(client,/المتابعة باستخدام Google/);
-  assert.match(client,/أو المتابعة بالبريد الإلكتروني/);
+  assert.doesNotMatch(client,/أو المتابعة بالبريد الإلكتروني/);
   assert.match(client,/data-account-action="import-guest"/);
   assert.match(client,/data-account-action="switch-account">الخروج والدخول بحساب آخر/);
   assert.match(client,/if\(action==='logout'\|\|action==='export-and-logout'\|\|action==='switch-account'\)/);
