@@ -100,7 +100,7 @@ export function applySmartSuggestion(data,proposal,{today=todayKey(),id=()=>cryp
   if(!proposal||typeof proposal.id!=='string')throw Error('الاقتراح غير صالح.');
   // Recompute from the current snapshot. Any stale suggestion (including a
   // changed target date) is rejected rather than overwriting a newer plan.
-  const current=smartPlanSuggestions(data,{today,limit:20}).find(s=>s.id===proposal.id);
+  const current=smartPlanSuggestions(data,{today}).find(s=>s.id===proposal.id);
   if(!current||current.expectedDate!==proposal.expectedDate||current.date!==proposal.date||
     current.action!==proposal.action||current.sourceId!==proposal.sourceId)
     throw Error('تغيّرت الخطة منذ عرض الاقتراح. حدّث الاقتراحات وحاول من جديد.');
