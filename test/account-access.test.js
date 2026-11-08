@@ -30,8 +30,9 @@ test('public sign-in dialog offers only Google, without email or password action
 
 test('account dashboard still allows safe sign-out and guest restoration',()=>{
   const source=read('../src/account-ui.js');
-  assert.match(source,/account-dashboard-actions/);
-  assert.match(source,/تسجيل الخروج/);
+  const center=read('../src/account-center.js');
+  assert.match(center,/account-center-footer/);
+  assert.match(center,/تسجيل الخروج/);
   assert.match(source,/await post\('logout'\)/);
   assert.match(source,/restoreGuest\(\);buttonView\(\)/);
 });
