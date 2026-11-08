@@ -1232,3 +1232,31 @@ body.dark .account-day input:checked+span,body.dark .account-known-match.selecte
   .account-center-tile{padding:10px}
   .account-center-nav{align-items:flex-start;flex-direction:column}
 }
+
+
+/* Phase 3: explainable and opt-in smart Quran scheduling */
+.journey-smart{margin:16px 0;display:grid;gap:13px;padding:17px 20px;border:1px solid var(--line);
+  background:var(--surface2);border-radius:17px}
+.journey-smart-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.journey-smart-heading>div{display:grid;gap:4px;min-width:0;flex:1 1 240px}
+.journey-smart-heading h3{font-size:17px;margin:0;color:var(--text)}
+.journey-smart-heading p{font-size:12px;margin:0;line-height:1.8;color:var(--muted)}
+.journey-smart-heading .small-btn{flex:0 0 auto;min-height:39px;border-radius:10px}
+.journey-smart-list{display:grid;gap:8px}
+.journey-smart-item{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  gap:12px;background:var(--surface);border:1px solid var(--line);
+  border-radius:12px;padding:12px 14px}
+.journey-smart-item>div{flex:1 1 215px;min-width:0}
+.journey-smart-item strong,.journey-smart-item small{display:block}
+.journey-smart-item strong{font-size:14px;color:var(--text)}
+.journey-smart-item small{font-size:11px;color:var(--muted);margin:4px 0}
+.journey-smart-item p{margin:5px 0 0;font-size:12px;line-height:1.8;color:var(--muted)}
+.journey-smart-item .small-btn{flex:0 0 auto;min-height:39px;border-radius:10px}
+.journey-smart-hint{font-size:11px;line-height:1.8;color:var(--muted);margin:0}
+.journey-smart button:focus-visible{outline:3px solid var(--green2);outline-offset:2px}
+@media(max-width:600px){
+  .journey-smart{padding:13px}
+  .journey-smart-heading,.journey-smart-item{align-items:stretch}
+  .journey-smart-heading .small-btn,.journey-smart-item .small-btn{width:100%}
+}
+@media(prefers-reduced-motion:reduce){.journey-smart *{scroll-behavior:auto}}
