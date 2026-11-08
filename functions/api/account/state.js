@@ -25,7 +25,7 @@ const identity=id=>typeof id==='string'&&/^[\da-f]{8}-(?:[\da-f]{4}-){3}[\da-f]{
 
 async function fetchOwnState(env,session){
   if(!identity(session.user.id))throw Object.assign(new Error('جلسة غير صالحة.'),{status:401});
-  return supabase(env,'/rest/v1/user_state?user_id=eq.'+session.user.id+'&select=payload,revision&limit=1',{
+  return supabase(env,'/rest/v1/user_state?user_id=eq.'+session.user.id+'&select=payload,revision,updated_at&limit=1',{
     headers:{Authorization:'Bearer '+session.token}
   });
 }
@@ -38,8 +38,8 @@ export async function onRequestGet({request,env}){
     if(!r.ok)return accountResponse({error:'تعذر قراءة بيانات حسابك. تحقق من تفعيل RLS وSQL.'},503,session.headers);
     const rows=await supabaseData(r);
     const item=Array.isArray(rows)?rows[0]:null;
-    if(!item)return accountResponse({revision:0,payload:null},200,session.headers);
-    return accountResponse({revision:item.revision,payload:item.payload},200,session.headers);
+    if(!item)return accountResponse({revision:0,payload:null,updatedAt:null},200,session.headers);
+    return accountResponse({revision:item.revision,payload:item.payload,updatedAt:item.updated_at||null},200,session.headers);
   }catch(err){return fail(err)}
 }
 export async function onRequestPut({request,env}){
@@ -67,6 +67,6 @@ export async function onRequestPut({request,env}){
     const rows=await supabaseData(result);
     if(!Array.isArray(rows)||rows.length!==1)
       return accountResponse({error:'تم تعديل الحساب من جهاز آخر. احتفظ بنسخة من التغييرات المحلية.',code:'REVISION_CONFLICT'},409,session.headers);
-    return accountResponse({saved:true,revision:rows[0].revision},200,session.headers);
+    return accountResponse({saved:true,revision:rows[0].revision,updatedAt:rows[0].updated_at||now},200,session.headers);
   }catch(error){return fail(error);}
 }
