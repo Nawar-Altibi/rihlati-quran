@@ -47,7 +47,7 @@ export function smartPlanSuggestions(data,{today=todayKey(),horizonDays=14,limit
     return null;
   }
   const suggestions=[];
-  const overdue=items.filter(item=>item?.id&&isValidDateKey(item.date)&&item.date<today&&
+  const overdue=items.filter(item=>item?.id&&item.status!=='archived'&&isValidDateKey(item.date)&&item.date<today&&
     hasSurah(item.surah)&&['review','memorize','recitation'].includes(item.kind)&&
     planItemState(data,item,today)==='missed')
     .sort((a,b)=>score(unitFor(a.surah))-score(unitFor(b.surah))||
@@ -102,7 +102,9 @@ export function applySmartSuggestion(data,proposal,{today=todayKey(),id=()=>cryp
   // changed target date) is rejected rather than overwriting a newer plan.
   const current=smartPlanSuggestions(data,{today}).find(s=>s.id===proposal.id);
   if(!current||current.expectedDate!==proposal.expectedDate||current.date!==proposal.date||
-    current.action!==proposal.action||current.sourceId!==proposal.sourceId)
+    current.action!==proposal.action||current.sourceId!==proposal.sourceId||
+    current.surah!==proposal.surah||current.kind!==proposal.kind||current.minutes!==proposal.minutes||
+    (current.action==='due'&&(current.fromAyah!==proposal.fromAyah||current.toAyah!==proposal.toAyah)))
     throw Error('تغيّرت الخطة منذ عرض الاقتراح. حدّث الاقتراحات وحاول من جديد.');
   if(current.action==='carry'){
     const item=planEntries(data).find(i=>i.id===current.sourceId);
