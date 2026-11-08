@@ -4,6 +4,10 @@ import {
   createOnboardingDraft, renderOnboardingWizard, renderSurahSearchResults,
   validateOnboardingDraft, toggleKnownSurah, updateKnownRange, buildOnboardingPayload
 } from './onboarding.js';
+import {
+  createSettingsDraft,validateSettingsDraft,buildSettingsUpdate,toggleAccountSurah,
+  renderAccountSurahMatches,renderPreferences,renderAccountCenter
+} from './account-center.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cloudRoot='/api/account';
@@ -37,7 +41,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   let available=false,registration=false,googleSignIn=false,siteKey=null,mode='guest',user=null,revision=0;
   let modal='',email='',purpose='email',busy=false,error='',sending=false,pending=null,blocked=false;
   let pendingRecovery=null,captchaToken='',turnstileWidgetId=null,resendUntil=0,resendInterval=null;
-  let onboarding=createOnboardingDraft();
+  let onboarding=createOnboardingDraft(),preferences=null,lastSavedAt=null;
   const button=document.getElementById('account-entry');
   const root=document.getElementById('account-root');
   const escUser=()=>esc(user?.displayName||user?.email||'حسابي');
@@ -68,7 +72,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   }
   function page(){
     const title={login:'أهلًا بعودتك',signup:'أنشئ رحلتك الخاصة',verify:'أكّد بريدك',recover:'استعادة كلمة المرور',
-      password:'كلمة مرور جديدة',loading:'تحميل تقدمك',setup:'ابدأ رحلتك',dashboard:'حسابي ومزامنة التقدم',disabled:'حسابات رِحلتي'}[modal]||'حسابي';
+      password:'كلمة مرور جديدة',loading:'تحميل تقدمك',setup:'ابدأ رحلتك',dashboard:'حسابي',preferences:'إدارة خطتي',sync:'المزامنة والنسخ الاحتياطي',privacy:'الخصوصية والبيانات',disabled:'حسابات رِحلتي'}[modal]||'حسابي';
     const intro={
       login:'سجّل دخولك حتى تلاقي خطتك ومراجعاتك على أجهزتك.',
       signup:'كل شخص إله سجل حفظ ومراجعات وخطة مستقلة تمامًا.',
@@ -76,7 +80,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       recover:'اطلب رمزًا لاستعادة كلمة مرورك؛ لن نكشف ما إذا كان البريد مسجّلًا.',
       loading:'نتحقق من بيانات حسابك ونحمّل رحلتك بأمان.',
       setup:'كيف بتحب تبدأ؟ خطتك الجديدة لحالها، أو تنقل سجلات هالجهاز بإذنك.',
-      dashboard:'تقدمك مرتبط بحسابك، وما في حدا تاني بيقدر يشوفه.'
+      dashboard:'رحلتك وخيارات حسابك بمكان واحد.',preferences:'خصّص أهدافك بدون ما تخسر تقدمك.',sync:'راجع حالة السحابة وصدّر نسخة من بياناتك.',privacy:'خيارات واضحة للتحكم ببيانات رحلتك.'
     }[modal]||'';
     let content='';
     const formButton=(title,action)=>'<button type="submit" class="primary account-submit" '+(busy?'disabled':'')+'>'+title+'</button>';
@@ -109,18 +113,14 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       htmlInput('password','كلمة المرور الجديدة','password','12 حرفًا أو أكثر','required minlength="12" maxlength="128" autocomplete="new-password"')+
       formButton('تغيير كلمة المرور')+'</form>';
     if(modal==='setup')content=renderOnboardingWizard(onboarding,counts(guestData()));
-    if(modal==='dashboard')content='<div class="account-dashboard"><div class="account-user">'+
-      '<span class="account-avatar">'+esc((user?.displayName||user?.email||'ق').trim()[0])+'</span>'+
-      '<div><b>'+escUser()+'</b><small dir="ltr">'+esc(user?.email||'')+'</small></div></div>'+
-      '<div class="account-cloud-state">'+statusText()+'</div>'+
-      '<p>تقدم الحساب محفوظ في السحابة ومتاح بعد الدخول من جهاز آخر. نسخة الضيف على هالجهاز محفوظة بشكل منفصل.</p>'+
-      (blocked?'<div class="account-notice account-notice-error">في تغييرات غير متزامنة. ما رح نكتب فوق بيانات الجهاز الآخر. صدّر نسخة احتياطية من التغييرات قبل المتابعة.</div>':'')+
-      '<div class="account-dashboard-actions">'+
-      '<button type="button" class="secondary" data-account-action="sync">حاول مزامنة الآن</button>'+
-      '<button type="button" class="secondary" data-account-action="export">صدّر نسخة احتياطية</button>'+
-      '<button type="button" class="secondary account-switch" data-account-action="switch-account">الخروج والدخول بحساب آخر</button>'+
-      '<button type="button" class="account-logout" data-account-action="'+(pending||sending||blocked?'export-and-logout':'logout')+'">'+
-      (pending||sending||blocked?'تنزيل نسخة احتياطية ثم الخروج':'تسجيل الخروج')+'</button></div></div>';
+    if(['dashboard','sync','privacy'].includes(modal))content=renderAccountCenter(modal,{
+      user,status:statusText(),lastSavedAt,revision,blocked,pending:pending||sending,busy
+    });
+    if(modal==='preferences'){
+      if(!preferences)preferences=createSettingsDraft(getData());
+      content='<div class="account-center-nav"><button class="secondary" type="button" data-account-action="center-home">← العودة إلى حسابي</button></div>'+
+        renderPreferences(preferences);
+    }
 
     return '<div class="account-overlay" data-account-close><section class="account-dialog" role="dialog" aria-modal="true" aria-label="'+title+'">'+
       '<div class="account-dialog-head"><div class="account-kicker">رِحلتي مع القرآن</div>'+
@@ -198,6 +198,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
         const result=await api('/state',{method:'PUT',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({expectedRevision:revision,payload:snapshot})});
         revision=result.revision;
+        lastSavedAt=result.updatedAt||lastSavedAt;
         if(!pending)sessionStorage.removeItem(safeSessionKey(user.id));
         else savePendingLocally();
         buttonView();
@@ -220,6 +221,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     open('loading');
     const state=await api('/state');
     revision=Number(state.revision)||0;
+    lastSavedAt=state.updatedAt||null;
     let cached=null;
     try{cached=JSON.parse(sessionStorage.getItem(safeSessionKey(user.id))||'null');}catch{}
     if(state.payload){
@@ -237,13 +239,14 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     // No rows for this user yet: explicit choice between brand-new data and
     // the separate legacy guest copy. Never import localStorage silently.
     setData(makeNewUserData());
+    preferences=null;lastSavedAt=null;
     onboarding=createOnboardingDraft();
     mode='setup';open('setup');buttonView();
   }
   async function begin(payload){
     const state=await api('/state',{method:'PUT',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({expectedRevision:0,payload})});
-    revision=state.revision;pending=null;blocked=false;
+    revision=state.revision;lastSavedAt=state.updatedAt||null;pending=null;blocked=false;
     setData(payload);mode='account';close();buttonView();
     toast('أهلًا في رحلتك! صار فيك تخصص خطتك وتحفظ تقدمك بحسابك.');
   }
@@ -368,7 +371,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       try{
         await post('logout');
         if(user)sessionStorage.removeItem(safeSessionKey(user.id));
-        user=null;mode='guest';revision=0;blocked=false;pending=null;pendingRecovery=null;
+        user=null;mode='guest';revision=0;blocked=false;pending=null;pendingRecovery=null;preferences=null;lastSavedAt=null;
         restoreGuest();buttonView();
         if(switching){busy=false;open('login');toast('تم تسجيل الخروج. اختر الحساب الذي تريد المتابعة به.');}
         else{close();toast('تم تسجيل الخروج. رجعت لبيانات الضيف الموجودة على هالجهاز.');}
