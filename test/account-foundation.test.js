@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof,storeRecoveryProof,consumeRecoveryProof,readOAuthFlow,setOAuthFlow} from '../functions/_lib/account.js';
+import {accountConfig,originMatches,setRecoveryProof,hasRecoveryProof,storeRecoveryProof,consumeRecoveryProof,readOAuthFlow,setOAuthFlow,supabase} from '../functions/_lib/account.js';
 import {onRequestGet as accountGet,onRequestPost as accountPost} from '../functions/api/account.js';
 import {onRequestPost as googleStart} from '../functions/api/account/google/start.js';
 import {onRequestGet as googleCallback} from '../functions/api/account/google/callback.js';
@@ -29,6 +29,17 @@ const withFetch=async(stub,fn)=>{
   const original=globalThis.fetch;globalThis.fetch=stub;
   try{return await fn()}finally{globalThis.fetch=original;}
 };
+
+test('Supabase requests use Workers-compatible redirect handling and reject unexpected redirects',async()=>{
+  await withFetch(async(url,options)=>{
+    assert.equal(options.redirect,'manual');
+    return new Response(null,{status:302,headers:{Location:'https://unexpected.example/'}});
+  },async()=>{
+    await assert.rejects(()=>supabase(env,'/auth/v1/token?grant_type=pkce',{method:'POST',body:{auth_code:'test'}}),/Unexpected Supabase redirect/);
+    const response=await supabase(env,'/auth/v1/settings',{redirect:'manual'});
+    assert.equal(response.status,302);
+  });
+});
 
 test('public mode is safely disabled until owner provisions the backend',async()=>{
   const config=accountConfig({});
