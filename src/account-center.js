@@ -130,7 +130,7 @@ export function renderAccountCenter(view,{user,status,lastSavedAt,revision,block
   const email=esc(user?.email||'');
   const profile='<div class="account-user account-center-profile"><span class="account-avatar">'+
     esc((user?.displayName||user?.email||'ق').trim()[0])+'</span><div><b>'+display+
-    '</b><small dir="ltr">'+email+'</small><span class="account-center-provider">متصل بحساب Google</span></div></div>';
+    '</b><small dir="ltr">'+email+'</small><span class="account-center-provider">حسابك في رِحلتي</span></div></div>';
   const bar='<div class="account-center-nav">'+(view==='dashboard'?'':button('center-home','← العودة إلى حسابي'))+
     '<span class="account-center-status">'+esc(status)+'</span></div>';
   if(view==='dashboard')return '<div class="account-dashboard account-center">'+profile+
@@ -158,7 +158,7 @@ export function renderAccountCenter(view,{user,status,lastSavedAt,revision,block
     '<h3>الخصوصية وبياناتي</h3><p>نحفظ خطتك وسجلات الحفظ والمراجعة والتسميع ضمن حسابك في Supabase. الوصول إلى بيانات الحساب محمي بسياسات RLS، ونسخة الضيف على جهازك مستقلة.</p>'+
     '<div class="account-center-actions">'+button('export','تصدير بيانات رحلتي')+'</div>'+
     '<section class="account-center-danger"><h4>حذف الحساب نهائيًا</h4>'+
-    '<p>لسه ما فعّلنا حذف حساب Google وبياناته نهائيًا، لأن العملية تحتاج مسار خادم آمن واختبارًا قبل إطلاقها. تنزيل نسخة احتياطية أو تسجيل الخروج لا يحذف حسابك.</p>'+
+    '<p>لسه ما فعّلنا حذف حسابك في الموقع وبياناته نهائيًا، لأن العملية تحتاج مسار خادم آمن واختبارًا قبل إطلاقها. تنزيل نسخة احتياطية أو تسجيل الخروج لا يحذف حسابك.</p>'+
     '<button type="button" disabled aria-disabled="true" title="غير متاح حتى اكتمال مسار الحذف الآمن">حذف الحساب — غير متاح حاليًا</button></section></div>';
   return profile;
 }
