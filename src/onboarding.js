@@ -93,7 +93,9 @@ export function suggestedOnboardingPlan(draft,start=todayKey()){
     const isReview=draft.goal==='review'||(draft.goal==='mixed'&&position%2===0);
     const current=isReview?reviewSurahs[Math.floor(position/(draft.goal==='review'?1:2))%reviewSurahs.length]:null;
     const mem=surah(stageFirst);
-    const span=isReview?current:{surah:mem.number,fromAyah:1,toAyah:Math.min(mem.ayahs,5)};
+    const memorizeIndex=draft.goal==='memorize'?position:Math.floor(position/2);
+    const startAyah=Math.min(mem.ayahs,1+5*memorizeIndex);
+    const span=isReview?current:{surah:mem.number,fromAyah:startAyah,toAyah:Math.min(mem.ayahs,startAyah+4)};
     ideas.push({date,kind:isReview?'review':'memorize',surah:span.surah,
       fromAyah:span.fromAyah,toAyah:span.toAyah,minutes:draft.dailyMinutes,
       notes:isReview?'مراجعة مقترحة لتقييم الحفظ السابق؛ ليست إنجازًا مسجّلًا.':
@@ -112,6 +114,19 @@ export function buildOnboardingPayload(draft,start=todayKey()){
     knownSurahs:draft.knownSurahs.map(s=>({...s})),
     studyDays:[...data.settings.memorizationDays]
   };
+  // New accounts get stage-neutral wording instead of the original author's demo plan.
+  const stageName=ONBOARDING_STAGES.find(s=>s[0]===draft.stage)[1];
+  const goalName=ONBOARDING_GOALS.find(g=>g[0]===draft.goal)[1];
+  data.settings.phases[0]={
+    title:'رحلتي في '+stageName,status:'جارٍ العمل',
+    detail:goalName+' حسب وقتي وأيامي المختارة، مع مراجعة دورية مرنة.'
+  };
+  data.settings.monthlyPlan=[
+    {week:'الأسبوع الأول',title:'بداية خفيفة',detail:'جرّب الأوراد المقترحة وعدّلها بحسب وقتك.'},
+    {week:'الأسبوع الثاني',title:'تثبيت الاستمرارية',detail:'وازن بين هدفك ومراجعة ما حفظته.'},
+    {week:'الأسبوع الثالث',title:'تقييم التقدم',detail:'راجع جودة الحفظ والتسميع دون استعجال.'},
+    {week:'الأسبوع الرابع',title:'تعديل الخطة',detail:'خفف أو زد الأوراد بناءً على أدائك الفعلي.'}
+  ];
   // Planned items only; never create units, reviews, sessions or completed activities.
   for(const idea of suggestedOnboardingPlan(draft,start))savePlanEntry(data,idea);
   return data;
