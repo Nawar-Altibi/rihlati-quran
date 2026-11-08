@@ -80,6 +80,9 @@ test('beginner can start without self-reported memorization or seeded author his
   assert.equal(data.studyPlan[0].kind,'memorize');
   assert.equal(data.studyPlan[0].fromAyah,1);
   assert.equal(data.studyPlan[0].toAyah,5);
+  assert.deepEqual(data.studyPlan.map(v=>[v.fromAyah,v.toAyah]),[[1,5],[6,10],[11,15]]);
+  assert.match(data.settings.phases[0].title,/سورة البقرة/);
+  assert.doesNotMatch(JSON.stringify(data.settings.monthlyPlan),/النبأ والنازعات/);
   assert.equal(data.activities.length,0);
   assert.equal(data.onboardingDone,true);
 });
