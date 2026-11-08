@@ -1,9 +1,12 @@
 import {makeNewUserData,DEFAULT_SETTINGS} from './data.js';
 import {migrateData} from './storage.js';
+import {
+  createOnboardingDraft, renderOnboardingWizard, renderSurahSearchResults,
+  validateOnboardingDraft, toggleKnownSurah, updateKnownRange, buildOnboardingPayload
+} from './onboarding.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 const cloudRoot='/api/account';
-const STAGES=[['amma','جزء عمّ'],['tabarak','جزء تبارك'],['qad','جزء قد سمع'],['baqarah','سورة البقرة']];
 export const passwordsMatch=(password,confirmation)=>typeof password==='string'&&password.length>0&&password===confirmation;
 function readableError(error,fallback='حصل خطأ بالاتصال. حاول مرة ثانية.'){
   return typeof error?.message==='string'&&error.message?error.message:fallback;
@@ -34,6 +37,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
   let available=false,registration=false,googleSignIn=false,siteKey=null,mode='guest',user=null,revision=0;
   let modal='',email='',purpose='email',busy=false,error='',sending=false,pending=null,blocked=false;
   let pendingRecovery=null,captchaToken='',turnstileWidgetId=null,resendUntil=0,resendInterval=null;
+  let onboarding=createOnboardingDraft();
   const button=document.getElementById('account-entry');
   const root=document.getElementById('account-root');
   const escUser=()=>esc(user?.displayName||user?.email||'حسابي');
@@ -104,20 +108,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     if(modal==='password')content='<form class="account-form" data-account-form="set-password">'+
       htmlInput('password','كلمة المرور الجديدة','password','12 حرفًا أو أكثر','required minlength="12" maxlength="128" autocomplete="new-password"')+
       formButton('تغيير كلمة المرور')+'</form>';
-    if(modal==='setup'){
-      const current=guestData(),s=counts(current);
-      content='<div class="account-setup-actions"><form class="account-form account-setup-form" data-account-form="new">'+
-        '<h3>ابدأ بخطة جديدة من الصفر</h3><p>ما رح نفترض إنك حافظ أي سورة؛ كل ورد تضيفه بإيدك.</p>'+
-        '<label class="account-field"><span>على شو حابب تركز أول شي؟</span>'+
-        '<select class="select" name="stage">'+STAGES.map(([v,t])=>'<option value="'+v+'">'+t+'</option>').join('')+'</select></label>'+
-        htmlInput('dailyMinutes','قديش وقتك بالدقائق يوميًا؟','number','','required min="10" max="180" value="30"')+
-        formButton('ابدأ رحلتي الجديدة')+'</form>'+
-        '<div class="account-import-option"><h3>عندي تقدم على هالجهاز</h3>'+
-        '<p>'+s.memorize+' حفظ، '+s.reviews+' مراجعة، '+s.planned+' أوراد مخططة، '+s.sessions+' جلسات تسميع.</p>'+
-        '<button type="button" class="secondary" data-account-action="import-guest">أنقل سجلات هالجهاز لحسابي</button>'+
-        '<small>النقل اختياري وبموافقتك فقط. النسخة المحلية رح تبقى موجودة.</small></div>'+
-        '<button type="button" class="account-logout" data-account-action="logout">أكمل كضيف · تسجيل الخروج</button></div>';
-    }
+    if(modal==='setup')content=renderOnboardingWizard(onboarding,counts(guestData()));
     if(modal==='dashboard')content='<div class="account-dashboard"><div class="account-user">'+
       '<span class="account-avatar">'+esc((user?.displayName||user?.email||'ق').trim()[0])+'</span>'+
       '<div><b>'+escUser()+'</b><small dir="ltr">'+esc(user?.email||'')+'</small></div></div>'+
@@ -246,6 +237,7 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     // No rows for this user yet: explicit choice between brand-new data and
     // the separate legacy guest copy. Never import localStorage silently.
     setData(makeNewUserData());
+    onboarding=createOnboardingDraft();
     mode='setup';open('setup');buttonView();
   }
   async function begin(payload){
@@ -268,12 +260,6 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     if(submitButton)submitButton.disabled=true;
     const verifiedCaptchaToken=captchaToken;
     try{
-      if(kind==='new'){
-        const mins=Number(fd.get('dailyMinutes')),stage=String(fd.get('stage')||'amma');
-        if(!Number.isInteger(mins)||mins<10||mins>180)throw new Error('حدد وقتًا يوميًا بين 10 و180 دقيقة.');
-        await begin(makeNewUserData({stage,dailyMinutes:mins}));
-        return;
-      }
       const payload={email:String(fd.get('email')||email).trim().toLowerCase(),
         password:String(fd.get('password')||''),displayName:String(fd.get('displayName')||''),
         captchaToken:verifiedCaptchaToken};
@@ -289,6 +275,35 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       else if(kind==='set-password'){await loadState();toast('تم تعديل كلمة المرور.');}
     }catch(e){error=readableError(e);}
     finally{busy=false;renderModal();buttonView();}
+  }
+  async function handleOnboardingAction(control){
+    if(modal!=='setup'||busy||mode!=='setup'||!user)return;
+    const action=control.dataset.onboardAction;
+    const value=control.dataset.value;
+    try{
+      error='';
+      if(action==='level')onboarding.level=value;
+      else if(action==='stage')onboarding.stage=value;
+      else if(action==='goal')onboarding.goal=value;
+      else if(action==='minutes')onboarding.dailyMinutes=Number(value);
+      else if(action==='day'){
+        const day=Number(value);
+        onboarding.days=onboarding.days.includes(day)?
+          onboarding.days.filter(d=>d!==day):[...onboarding.days,day].sort((a,b)=>a-b);
+      }else if(action==='surah')toggleKnownSurah(onboarding,Number(value));
+      else if(action==='back')onboarding.step=Math.max(0,onboarding.step-1);
+      else if(action==='next'){
+        validateOnboardingDraft(onboarding,onboarding.step);
+        onboarding.step=Math.min(3,onboarding.step+1);
+      }else if(action==='finish'){
+        validateOnboardingDraft(onboarding,3);
+        const payload=buildOnboardingPayload(onboarding);
+        busy=true;renderModal();
+        await begin(payload);
+        return;
+      }else return;
+    }catch(e){error=readableError(e);}
+    finally{busy=false;if(modal==='setup')renderModal();}
   }
   async function handleAction(action){
     if(action==='close'){
@@ -365,8 +380,22 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     button?.addEventListener('click',()=>open(user?(inAccount()?'dashboard':'setup'):'login'));
     root?.addEventListener('click',e=>{
       if(e.target?.matches('[data-account-close]')){void handleAction('close');return;}
+      const onboardingControl=e.target.closest('[data-onboard-action]');
+      if(onboardingControl){void handleOnboardingAction(onboardingControl);return;}
       const control=e.target.closest('[data-account-action]');
       if(control)void handleAction(control.dataset.accountAction);
+    });
+    root?.addEventListener('input',e=>{
+      if(modal!=='setup'||!e.target.matches('[data-onboard-search]'))return;
+      onboarding.query=e.target.value;
+      const results=root.querySelector('[data-onboard-results]');
+      if(results)results.innerHTML=renderSurahSearchResults(onboarding);
+    });
+    root?.addEventListener('change',e=>{
+      if(modal!=='setup')return;
+      if(e.target.matches('[data-onboard-minutes]'))onboarding.dailyMinutes=Number(e.target.value);
+      if(e.target.matches('[data-onboard-range]'))
+        updateKnownRange(onboarding,Number(e.target.dataset.surah),e.target.dataset.onboardRange,e.target.value);
     });
     root?.addEventListener('submit',e=>{
       const googleForm=e.target.closest('[data-google-auth]');
