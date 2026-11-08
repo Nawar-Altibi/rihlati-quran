@@ -108,10 +108,15 @@ export async function supabase(env,path,options={}){
   const headers=new Headers(options.headers||{});
   headers.set('apikey',env.SUPABASE_PUBLISHABLE_KEY||env.SUPABASE_ANON_KEY);
   if(options.body!=null)headers.set('Content-Type','application/json');
-  return fetch(String(env.SUPABASE_URL).replace(/\/$/,'')+path,{
+  // Workers does not support fetch's `redirect: error` mode. Inspect redirects
+  // manually to keep credentials and request bodies from being forwarded.
+  const response=await fetch(String(env.SUPABASE_URL).replace(/\/$/,'')+path,{
     method:options.method||'GET',headers,body:options.body==null?undefined:JSON.stringify(options.body),
-    signal:AbortSignal.timeout(12000),redirect:options.redirect||'error',cache:'no-store'
+    signal:AbortSignal.timeout(12000),redirect:'manual',cache:'no-store'
   });
+  if(options.redirect!=='manual'&&response.status>=300&&response.status<400)
+    throw new Error('Unexpected Supabase redirect.');
+  return response;
 }
 export async function supabaseData(response){
   try{return await response.json()}catch{return {}}
