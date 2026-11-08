@@ -263,6 +263,28 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     if(submitButton)submitButton.disabled=true;
     const verifiedCaptchaToken=captchaToken;
     try{
+      if(kind==='preferences'){
+        if(!inAccount()||blocked)throw Error('المزامنة متوقفة أو الحساب غير جاهز. صدّر نسخة احتياطية وحاول بعد حل التعارض.');
+        if(!preferences)throw Error('تعذّر قراءة إعدادات رحلتك.');
+        preferences.stage=String(fd.get('stage')||'');
+        preferences.level=String(fd.get('level')||'');
+        preferences.goal=String(fd.get('goal')||'');
+        preferences.dailyMinutes=Number(fd.get('dailyMinutes'));
+        preferences.days=fd.getAll('memoDays').map(Number);
+        preferences.revisionDays=fd.getAll('reviewDays').map(Number);
+        preferences.recitationDay=Number(fd.get('recitationDay'));
+        form.querySelectorAll('[data-account-range]').forEach(input=>{
+          const range=preferences.knownSurahs.find(v=>v.surah===Number(input.dataset.surah));
+          if(range)range[input.dataset.accountRange]=Number(input.value);
+        });
+        validateSettingsDraft(preferences);
+        const next=buildSettingsUpdate(getData(),preferences);
+        if(!save(next))throw Error('تعذّر بدء حفظ التغييرات؛ لم نغيّر نسختك الحالية.');
+        setData(next);
+        preferences=null;open('dashboard');
+        toast('تغيّرت تفضيلات رحلتك. تحقق من حالة المزامنة قبل إغلاق المتصفح.');
+        return;
+      }
       const payload={email:String(fd.get('email')||email).trim().toLowerCase(),
         password:String(fd.get('password')||''),displayName:String(fd.get('displayName')||''),
         captchaToken:verifiedCaptchaToken};
@@ -348,7 +370,34 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       finally{busy=false;}
       return;
     }
-    if(action==='sync'){if(blocked){error='تضارب التعديل يحتاج نسخة احتياطية قبل الحل. لن نستبدل سجلات جهاز آخر تلقائيًا.';renderModal();return;}await sync();return;}
+    if(action==='center-home'){preferences=null;open('dashboard');return;}
+    if(action==='center-plan'){
+      if(!inAccount()){error='يلزم إعداد حسابك قبل تعديل الخطة.';renderModal();return;}
+      preferences=createSettingsDraft(getData());open('preferences');return;
+    }
+    if(action==='center-sync'){open('sync');return;}
+    if(action==='center-privacy'){open('privacy');return;}
+    if(action==='sync'){
+      if(blocked){
+        error='تضارب التعديل يحتاج نسخة احتياطية قبل الحل. لن نستبدل سجلات جهاز آخر تلقائيًا.';
+        renderModal();return;
+      }
+      if(sending||busy)return;
+      busy=true;error='';renderModal();
+      try{
+        if(pending)await sync();
+        if(blocked||pending)throw Error('لم تتأكد المزامنة بعد. احتفظ بنسخة احتياطية.');
+        const state=await api('/state');
+        if(Number(state.revision)!==revision){
+          blocked=true;
+          throw Error('في نسخة أحدث من جهاز آخر. نزّل نسخة احتياطية إذا احتجت، ثم حدّث الصفحة لتحميل التقدم الأحدث.');
+        }
+        lastSavedAt=state.updatedAt||lastSavedAt;
+        toast('تم التحقق من المزامنة، ونسخة الحساب متطابقة مع السحابة.');
+      }catch(e){error=readableError(e);}
+      finally{busy=false;renderModal();buttonView();}
+      return;
+    }
     if(action==='export'){
       saveCopy(pendingRecovery?.payload||pending||getData());
       toast('جُهزت نسخة احتياطية من تقدم هذا المتصفح.');
@@ -383,18 +432,35 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
     button?.addEventListener('click',()=>open(user?(inAccount()?'dashboard':'setup'):'login'));
     root?.addEventListener('click',e=>{
       if(e.target?.matches('[data-account-close]')){void handleAction('close');return;}
+      const selected=e.target.closest('[data-account-surah]');
+      if(selected&&modal==='preferences'&&preferences){
+        try{preferences.expandedKnown=true;toggleAccountSurah(preferences,Number(selected.dataset.accountSurah));error='';}
+        catch(err){error=readableError(err);}
+        renderModal();return;
+      }
       const onboardingControl=e.target.closest('[data-onboard-action]');
       if(onboardingControl){void handleOnboardingAction(onboardingControl);return;}
       const control=e.target.closest('[data-account-action]');
       if(control)void handleAction(control.dataset.accountAction);
     });
     root?.addEventListener('input',e=>{
+      if(modal==='preferences'&&preferences&&e.target.matches('[data-account-surah-search]')){
+        preferences.query=e.target.value;preferences.expandedKnown=true;
+        const matches=root.querySelector('[data-account-surah-results]');
+        if(matches)matches.innerHTML=renderAccountSurahMatches(preferences);
+        return;
+      }
       if(modal!=='setup'||!e.target.matches('[data-onboard-search]'))return;
       onboarding.query=e.target.value;
       const results=root.querySelector('[data-onboard-results]');
       if(results)results.innerHTML=renderSurahSearchResults(onboarding);
     });
     root?.addEventListener('change',e=>{
+      if(modal==='preferences'&&preferences&&e.target.matches('[data-account-range]')){
+        const range=preferences.knownSurahs.find(v=>v.surah===Number(e.target.dataset.surah));
+        if(range)range[e.target.dataset.accountRange]=Number(e.target.value);
+        preferences.expandedKnown=true;return;
+      }
       if(modal!=='setup')return;
       if(e.target.matches('[data-onboard-minutes]'))onboarding.dailyMinutes=Number(e.target.value);
       if(e.target.matches('[data-onboard-range]'))
