@@ -36,4 +36,4 @@ The new scheduling assistant is under **Today** and **Quran Plan** and uses exis
 - Users still edit the ayah range or calendar manually when needed.
 - No automatic plan rewriting, push reminders or background jobs.
 - Preview OAuth redirect URL must be explicitly allowed in Supabase:
-  `https://feature-smart-planning-phase3.rihlati-quran.pages.dev/api/account/google/callback*`
+  `https://feature-smart-planning-phase.rihlati-quran.pages.dev/api/account/google/callback*`
