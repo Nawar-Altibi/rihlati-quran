@@ -1080,3 +1080,79 @@ body.dark .account-google-button{background:#f8f9fa;color:#25312b;border-color:#
   .topbar .breadcrumb{font-size:11px}
   .topbar .top-actions{gap:5px}
 }
+
+
+/* Progressive account onboarding v2 */
+.account-dialog:has(.onboard-wizard){width:min(650px,100%)}
+.onboard-wizard{gap:12px}
+.onboard-progress{display:grid;gap:5px;border-bottom:1px solid var(--line);padding:0 2px 12px}
+.onboard-progress>div{display:grid;gap:8px}
+.onboard-progress small{font-size:12px;color:var(--text);font-weight:700}
+.onboard-progress p{font-size:11px;margin:0;color:var(--muted)}
+.onboard-progress-bars{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;direction:rtl}
+.onboard-progress-bars span{height:5px;background:var(--line);border-radius:20px}
+.onboard-progress-bars span.active{background:var(--green2)}
+.onboard-panel{display:grid;gap:12px;min-width:0}
+.onboard-panel h3{font-size:16px;margin:5px 0 0}
+.onboard-panel>p,.onboard-panel>.onboard-hint{font-size:12px;color:var(--muted);line-height:1.8;margin:0}
+.onboard-choice-stack{display:grid;gap:9px}
+.onboard-stage-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.onboard-choice{display:grid;gap:4px;text-align:right;min-width:0;min-height:48px;
+  padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  color:var(--text);transition:border-color .18s,background .18s}
+.onboard-choice strong{font-size:13px;line-height:1.45}
+.onboard-choice small{color:var(--muted);font-size:11px;line-height:1.6;font-weight:400}
+.onboard-choice.selected,.onboard-surah-option.selected{border-color:var(--green2);background:var(--green-soft)}
+.onboard-choice.selected strong{color:var(--green)}
+.onboard-choice:focus-visible,.onboard-surah-option:focus-visible,.onboard-nav button:focus-visible,
+.onboard-link:focus-visible{outline:3px solid var(--green2);outline-offset:2px}
+.onboard-section-label{font-size:12px;font-weight:700;margin-top:7px}
+.onboard-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px}
+.onboard-presets .onboard-choice{text-align:center;place-items:center;padding:8px 3px}
+.onboard-day-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.onboard-day-grid .onboard-choice{padding:9px 3px;text-align:center;place-items:center}
+.onboard-day-grid .onboard-choice strong{font-size:11px}
+.onboard-surah-results{max-height:190px;overflow-y:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;padding:2px}
+.onboard-surah-option{border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--text);
+  display:flex;align-items:center;justify-content:space-between;gap:7px;min-height:38px;padding:7px 9px;text-align:right;
+  font-size:12px}
+.onboard-surah-option span{min-width:0;overflow-wrap:anywhere}
+.onboard-surah-option small{flex:none;font-size:10px;color:var(--muted)}
+.onboard-known{border-top:1px solid var(--line);display:grid;gap:8px;padding-top:9px}
+.onboard-known h4,.onboard-panel h4{font-size:13px;margin:2px 0}
+.onboard-known-row{border:1px solid var(--line);padding:10px;border-radius:11px;background:var(--surface2);display:grid;gap:8px}
+.onboard-known-title{display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:12px}
+.onboard-link{background:transparent;border:0;color:var(--red);font-size:12px;text-decoration:underline}
+.onboard-range{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.onboard-range label{display:grid;gap:4px;font-size:11px;color:var(--muted)}
+.onboard-range .input{min-width:0;min-height:37px;font-size:13px}
+.onboard-summary{display:grid;gap:5px;margin:0}
+.onboard-summary>div{display:flex;gap:12px;justify-content:space-between;padding:9px 11px;background:var(--surface2);border-radius:9px}
+.onboard-summary dt{font-size:12px;color:var(--muted)}
+.onboard-summary dd{margin:0;font-size:12px;font-weight:700;text-align:left}
+.onboard-proposals{display:grid;gap:7px}
+.onboard-proposal{display:grid;gap:3px;border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+.onboard-proposal strong{font-size:12px}
+.onboard-proposal small{font-size:11px;color:var(--muted)}
+.onboard-hint{font-size:11px!important;color:var(--muted)!important;line-height:1.8;margin:0!important}
+.onboard-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:5px}
+.onboard-nav button{min-width:105px;min-height:42px;border-radius:10px}
+.onboard-nav .primary{min-width:155px}
+.onboard-import{display:grid;gap:8px}
+.onboard-import summary{font-weight:700;cursor:pointer;color:var(--text);font-size:13px}
+.onboard-import[open] summary{margin-bottom:5px}
+.onboard-import p{margin-top:7px}
+.onboard-import button{width:100%}
+.onboard-wizard>.account-logout{min-height:40px;border-radius:10px;font-size:12px}
+body.dark .onboard-choice,body.dark .onboard-surah-option{background:var(--surface)}
+body.dark .onboard-choice.selected,body.dark .onboard-surah-option.selected{background:var(--green-soft);border-color:#699a74}
+body.dark .onboard-choice.selected strong{color:#c8f0d0}
+@media(max-width:480px){
+  .onboard-stage-grid,.onboard-surah-results{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .onboard-day-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .onboard-choice{padding:8px}
+  .onboard-presets .onboard-choice{padding:6px 1px}
+  .onboard-panel h3{font-size:15px}
+  .onboard-nav button{min-width:90px}
+  .onboard-nav .primary{min-width:135px}
+}
