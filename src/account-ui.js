@@ -208,7 +208,10 @@ export function createAccountClient({getData,setData,guestData,restoreGuest,toas
       savePendingLocally();
       if(e.status===409){blocked=true;showCloudWarning('في تعديل أحدث من جهاز آخر؛ وقفنا المزامنة حتى ما نضيّع البيانات. صدّر نسخة حسابك قبل المتابعة.');}
       else showCloudWarning('البيانات لسه مو محفوظة بالسحابة؛ احتفظ بالتبويب مفتوحًا أو صدّر نسخة احتياطية.');
-    }finally{sending=false;buttonView();}
+    }finally{
+      sending=false;buttonView();
+      if(['dashboard','sync','privacy'].includes(modal))renderModal();
+    }
   }
   function save(doc){
     if(!inAccount())return false;
