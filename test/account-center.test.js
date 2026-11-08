@@ -17,7 +17,7 @@ test('account center displays cloud status and clear working navigation, includi
   const home=renderAccountCenter('dashboard',options);
   for(const x of ['center-plan','center-sync','center-privacy','switch-account','logout'])
     assert.match(home,new RegExp('data-account-action="'+x+'"'));
-  assert.match(home,/مثبت|حسابي|حساب Google/);
+  assert.match(home,/حسابك في رِحلتي/);
   assert.doesNotMatch(home,/example@gmail.com.*<script>/);
   const sync=renderAccountCenter('sync',options);
   assert.match(sync,/revision|مراجعة بيانات الحساب/i);
