@@ -175,7 +175,7 @@ test('signup requires matching password confirmation before calling Auth',()=>{
 
 test('first-time account setup hides guest data and cannot dismiss into guest storage',()=>{
   const client=readFileSync(new URL('../src/account-ui.js',import.meta.url),'utf8');
-  assert.match(client,/setData\(makeNewUserData\(\)\);\s*onboarding=createOnboardingDraft\(\);\s*mode='setup';open\('setup'\)/);
+  assert.match(client,/setData\(makeNewUserData\(\)\);\s*preferences=null;lastSavedAt=null;\s*onboarding=createOnboardingDraft\(\);\s*mode='setup';open\('setup'\)/);
   assert.match(client,/\['setup','loading'\]\.includes\(modal\)&&user\)\{await handleAction\('logout'\);return;\}/);
   assert.match(client,/isAccount:\(\)=>Boolean\(user\)/);
 });
@@ -586,7 +586,8 @@ test('Google sign-in UI is mobile-safe, flag-gated, and retains explicit onboard
   assert.doesNotMatch(client,/أو المتابعة بالبريد الإلكتروني/);
   const wizard=readFileSync(new URL('../src/onboarding.js',import.meta.url),'utf8');
   assert.match(wizard,/data-account-action="import-guest"/);
-  assert.match(client,/data-account-action="switch-account">الخروج والدخول بحساب آخر/);
+  const center=readFileSync(new URL('../src/account-center.js',import.meta.url),'utf8');
+  assert.match(center,/button\('switch-account','الخروج والدخول بحساب آخر'/);
   assert.match(client,/if\(action==='logout'\|\|action==='export-and-logout'\|\|action==='switch-account'\)/);
   assert.match(client,/if\(switching\)\{busy=false;open\('login'\)/);
   assert.match(client,/google-cancelled/);
