@@ -18,7 +18,7 @@ export function createSettingsDraft(doc){
     days:Array.isArray(s.memorizationDays)?[...s.memorizationDays]:[0,1,2,3,4,5],
     revisionDays:Array.isArray(s.revisionDays)?[...s.revisionDays]:[0,1,2,3,4,5,6],
     recitationDay:Number.isInteger(s.recitationDay)?s.recitationDay:5,
-    knownSurahs:Array.isArray(p.knownSurahs)?p.knownSurahs.map(v=>({...v})):[],query:''
+    knownSurahs:Array.isArray(p.knownSurahs)?p.knownSurahs.map(v=>({...v})):[],query:'',expandedKnown:false
   };
 }
 export function validateSettingsDraft(d){
@@ -97,7 +97,7 @@ function renderKnown(d){
       field('إلى الآية','<input class="input" type="number" min="1" max="'+s.ayahs+'" inputmode="numeric" value="'+v.toAyah+'" data-account-range="toAyah" data-surah="'+s.number+'">')+
       '</div></div>';
   }).join('');
-  return '<details class="account-known-editor"><summary>المحفوظ السابق ('+d.knownSurahs.length+' سور) — اختياري</summary>'+
+  return '<details class="account-known-editor"'+(d.expandedKnown?' open':'')+'><summary>المحفوظ السابق ('+d.knownSurahs.length+' سور) — اختياري</summary>'+
     '<p class="account-center-muted">معلومات شخصية فقط؛ ما بتتحول لإنجازات أو تسميعات متقنة.</p>'+
     field('ابحث عن سورة','<input type="search" class="input" data-account-surah-search value="'+esc(d.query)+'" placeholder="اسم أو رقم السورة" autocomplete="off">')+
     '<div class="account-known-results" data-account-surah-results>'+renderAccountSurahMatches(d)+'</div>'+
