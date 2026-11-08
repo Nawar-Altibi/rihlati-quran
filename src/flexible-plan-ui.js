@@ -3,6 +3,7 @@ import { uiIcon } from './ui-icons.js';
 import { addDays, todayKey } from './logic.js';
 import { normalizeArabicSearch } from './quran-metadata.js';
 import {planEntries,savePlanEntry,movePlanEntry,removePlanEntry,startSuggestedPlan,planItemState,dailyPlanStats,surahLabel} from './flexible-plan.js';
+import {smartPlanSuggestions,applySmartSuggestion} from './smart-plan.js';
 
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const formatDate=day=>new Intl.DateTimeFormat('ar',{weekday:'long',day:'numeric',month:'short'}).format(new Date(day+'T12:00:00'));
@@ -12,13 +13,14 @@ const stateClass={done:'done',today:'today',upcoming:'upcoming',missed:'missed'}
 const B=(a,t,id='',cls='secondary small-btn')=>{
   const actionIcon={ 'journey-add':'plus','journey-guide':'info','journey-open-surah':'book',
     'journey-log':'checkcircle','journey-tomorrow':'calendar','journey-edit':'settings',
-    'journey-remove':'trash','journey-open-plan':'plan','journey-template':'checkcircle'}[a];
+    'journey-remove':'trash','journey-open-plan':'plan','journey-template':'checkcircle',
+    'journey-smart-toggle':'calendar','journey-smart-apply':'checkcircle'}[a];
   return '<button type="button" class="'+cls+'" data-action="'+a+'"'+(id?' data-id="'+esc(id)+'"':'')+'>'+
     (actionIcon?uiIcon(actionIcon,16):'')+t+'</button>';
 };
 
 export function createFlexiblePlanUI({getData,persist,render,toast,openModal,openReview,openMemorize,openRecitation,openMushafSurah}) {
-  let guideOpen=false;
+  let guideOpen=false,smartOpen=false;
   const d=()=>getData();
   const all=()=>planEntries(d());
   const find=id=>all().find(x=>x.id===id);
@@ -52,6 +54,25 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
       '<article><div class="journey-mini-visual"><span class="journey-mini-card strong">✓ سجّل المراجعة</span><span class="journey-mini-meter"><i></i></span><span class="journey-mini-card">تقدّمك من سجلاتك الحقيقية</span></div><b>٣. سجّل إنجازك الفعلي</b><p>الورد المخطط ما بينحسب منجز حتى تسجّل الحفظ أو المراجعة أو التسميع فعلًا.</p></article>'+
       '</div><p class="journey-guide-note">الرسومات توضيحية. سجلاتك محفوظة على هذا المتصفح، والأفضل تصدّر نسخة احتياطية من الإعدادات.</p></section>';
   }
+  function smartPanel(){
+    const ideas=smartPlanSuggestions(d());
+    const content=smartOpen?(ideas.length?
+      '<div class="journey-smart-list">'+ideas.map(item=>'<article class="journey-smart-item">'+
+        '<div><strong>سورة '+esc(surahLabel(item.surah))+'</strong>'+
+        '<small>'+esc(item.kind==='review'?'مراجعة':item.kind==='memorize'?'حفظ':'تسميع')+
+        ' · '+formatDate(item.date)+' · '+item.minutes+' دقيقة</small>'+
+        '<p>'+esc(item.reason)+'</p></div>'+
+        B('journey-smart-apply',item.action==='carry'?'وافق على الترحيل':'أضف المراجعة',item.id,'secondary small-btn')+
+      '</article>').join('')+'</div>':
+      '<p class="simple-muted">ما في اقتراحات قابلة للجدولة حاليًا ضمن الأيام والوقت اللي اخترتهم. فيك تعدل أورادك يدويًا بأي وقت.</p>'):'';
+    return '<section class="journey-smart" aria-label="مساعد تخطيط الأوراد">'+
+      '<div class="journey-smart-heading"><div><span class="journey-eyebrow">اقتراحات مبنية على سجلّك</span>'+
+      '<h3>مساعد ترتيب الأوراد</h3><p>بيراجع الأوراد المتأخرة ومواعيد المراجعة الفعلية حسب أيامك ووقتك، بدون تغيير تلقائي.</p></div>'+
+      B('journey-smart-toggle',smartOpen?'إخفاء الاقتراحات':'اقترح لي ترتيبًا','','secondary small-btn')+
+      '</div>'+content+
+      (smartOpen?'<p class="journey-smart-hint">كل اقتراح يحتاج موافقتك. اعتماد الاقتراح لا يسجّل حفظًا أو مراجعة مكتملة، والمزامنة تتم بالطريقة المعتادة.</p>':'')+
+      '</section>';
+  }
   function emptyState(){
     const start=todayKey();
     return '<section class="journey-start"><span class="journey-start-star">✧</span><div><h3>ابدأ بخطة خفيفة تناسبك</h3>'+
@@ -62,7 +83,7 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
     const date=todayKey(),stats=dailyPlanStats(d(),date),todayItems=all().filter(x=>x.date===date);
     const missed=all().filter(x=>x.date<date&&planItemState(d(),x)==='missed');
     return '<section class="journey-today"><div class="journey-today-header"><div><span class="journey-eyebrow">وردك على راحتك</span><h2>خطة اليوم المرنة</h2><p>الورِد بيتغير مع ظروفك، واليوم اللي ما تقدر تراجع فيه ما بينحسب إنجاز.</p></div>'+B('journey-add','＋ أضف وردًا','','primary small-btn')+'</div>'+
-      '<div class="journey-today-metrics"><span><b>'+stats.total+'</b> مهام مخططة</span><span><b>'+stats.done+'</b> مكتملة فعلًا</span><span><b>'+stats.minutes+'</b> دقيقة مقترحة</span></div>'+
+      '<div class="journey-today-metrics"><span><b>'+stats.total+'</b> مهام مخططة</span><span><b>'+stats.done+'</b> مكتملة فعلًا</span><span><b>'+stats.minutes+'</b> دقيقة مقترحة</span></div>'+smartPanel()+
       (todayItems.length?'<div class="journey-today-items">'+todayItems.map(itemCard).join('')+'</div>':(all().length?'<p class="simple-muted">ما حددت ورد لليوم بعد. أضف أي سورة أو افتح الخطة ورحّل ورد سابق.</p>':emptyState()))+
       (missed.length?'<div class="journey-carry"><b>في '+missed.length+' ورد فات موعده، وما سجّلناه منجز.</b><span>مو لازم تعوّض الكل مرة وحدة؛ رحّل اللي يناسبك فقط.</span>'+B('journey-open-plan','شوف المهام القديمة')+'</div>':'')+
       '<div class="journey-today-footer">'+B('journey-open-plan','خصص خطتك')+B('journey-guide','؟ كيف بستخدم الموقع؟')+'</div>'+guide()+'</section>';
@@ -81,7 +102,7 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
         arr.filter(x=>x.date===date).map(itemCard).join('')+'</div>').join('');
     };
     return '<section class="journey-planner"><div class="journey-planner-head"><div><span class="journey-eyebrow">خطة قابلة للتغيير في أي وقت</span><h2>خُطتي على مزاجي</h2><p>حدد شو بدك تحفظ أو تراجع، وإيمتى. ما في ترتيب إجباري، ولا ورد مخطط بينحسب إنجاز.</p></div><div class="journey-planner-cta">'+B('journey-guide','؟ دليل الاستخدام')+B('journey-add','＋ أضف وردًا','','primary')+'</div></div>'+guide()+
-      '<div class="journey-planner-metrics"><span><b>'+entries.length+'</b> أوراد بالخطة</span><span><b>'+stats.missed+'</b> تحتاج إعادة جدولة</span><span><b>'+stats.minutes+'</b> دقيقة اليوم</span></div>'+
+      '<div class="journey-planner-metrics"><span><b>'+entries.length+'</b> أوراد بالخطة</span><span><b>'+stats.missed+'</b> تحتاج إعادة جدولة</span><span><b>'+stats.minutes+'</b> دقيقة اليوم</span></div>'+smartPanel()+
       (!entries.length?emptyState():'')+
       (old.length?'<section class="journey-group"><h3>أوراد فات موعدها <small>غيّرها بدون تسجيل إنجاز وهمي</small></h3>'+groups(old)+'</section>':'')+
       '<section class="journey-group"><h3>الأيام القادمة <small>14 يوم من اليوم</small></h3>'+
@@ -112,6 +133,22 @@ export function createFlexiblePlanUI({getData,persist,render,toast,openModal,ope
     try{
       switch(action){
         case 'journey-guide':guideOpen=!guideOpen;render();return true;
+        case 'journey-smart-toggle':smartOpen=!smartOpen;render();return true;
+        case 'journey-smart-apply':{
+          const proposal=smartPlanSuggestions(d()).find(item=>item.id===id);
+          if(!proposal){toast('الاقتراح تغيّر، افتح الاقتراحات من جديد.');render();return true;}
+          const verb=proposal.action==='carry'?'ترحيل الورد':'إضافة مراجعة مستحقة';
+          if(!confirm('هل تريد '+verb+' لسورة '+surahLabel(proposal.surah)+' يوم '+formatDate(proposal.date)+'؟ هذا تخطيط فقط، ولا يسجّل إنجازًا.'))return true;
+          const backup=structuredClone(d().studyPlan||[]);
+          try{
+            applySmartSuggestion(d(),proposal);
+            if(!onSave('تم اعتماد الاقتراح في خطتك؛ إن كنت مسجّلًا، تحقّق من المزامنة قبل الخروج.')){
+              d().studyPlan=backup;render();
+              toast('ما قدرنا نحفظ التغيير. رجّعنا خطتك كما كانت.');
+            }
+          }catch(error){d().studyPlan=backup;toast(error.message);render();}
+          return true;
+        }
         case 'journey-open-plan':return false; // handled by simple navigation layer
         case 'journey-add':edit();return true;
         case 'journey-edit':edit(id);return true;
